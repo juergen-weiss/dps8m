@@ -2190,7 +2190,7 @@ L:; // Transfer or instruction fetch
         if (get_addr_mode (cpu_p) == APPEND_mode)
           cpu_p->PR[n].SNR = cpu_p->PPR.PSR;
         cpu_p->PR[n].WORDNO = (cpu_p->PPR.IC + 1) & MASK18;
-        SET_PR_BITNO (n, 0);
+        SET_PR_BITNO (cpu_p, n, 0);
         HDBGRegPR (n);
       }
 
@@ -2277,7 +2277,7 @@ N: // CALL6
     // 00...0 -> C(PR7.WORDNO)
     cpu_p->PR[7].WORDNO = 0;
     // 000000 -> C(PR7.BITNO)
-    SET_PR_BITNO (7, 0);
+    SET_PR_BITNO (cpu_p, 7, 0);
     HDBGRegPR (7);
     // C(TPR.TRR) -> C(PPR.PRR)
     cpu_p->PPR.PRR = cpu_p->TPR.TRR;

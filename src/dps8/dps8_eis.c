@@ -2041,7 +2041,7 @@ void a4bd (void)
 //if (current_running_cpu_idx)
 //sim_printf ("a4bd char4no %d.\n", char4no);
 
-    SET_AR_CHAR_BITNO (ARn, (word2) (char4no / 2), (char4no % 2) ? 5 : 0);
+    SET_AR_CHAR_BITNO (cpup, ARn, (word2) (char4no / 2), (char4no % 2) ? 5 : 0);
     HDBGRegAR (ARn);
 //if (current_running_cpu_idx)
 //sim_printf ("a4bd CHAR %o %d.\n", cpu.AR[ARn].CHAR, cpu.AR[ARn].CHAR);
@@ -2091,7 +2091,7 @@ void s4bd (void)
     uint bitno = (uint) (difference % 32);
 //    cpu.AR [ARn].BITNO = tab [bitno];
     // SET_PR_BITNO (ARn, bitFromCnt[bitno % 8]);
-    SET_AR_CHAR_BITNO (ARn, bitFromCnt[bitno % 8] / 9, bitFromCnt[bitno % 8] % 9);
+    SET_AR_CHAR_BITNO (cpup, ARn, bitFromCnt[bitno % 8] / 9, bitFromCnt[bitno % 8] % 9);
     HDBGRegAR (ARn);
   }
 
@@ -2155,7 +2155,7 @@ void axbd (uint sz)
 
     cpu.AR [ARn].WORDNO = (word18) (sum / 36) & AMASK;
     //SET_PR_BITNO (ARn, sum % 36);
-    SET_AR_CHAR_BITNO (ARn, (sum % 36) / 9, sum % 9);
+    SET_AR_CHAR_BITNO (cpup, ARn, (sum % 36) / 9, sum % 9);
     HDBGRegAR (ARn);
   }
 
@@ -2179,7 +2179,7 @@ void abd (void)
     //if (cpu.AR[ARn].BITNO > 8)
       //cpu.AR[ARn].BITNO = 8;
     if (GET_AR_BITNO (ARn) > 8)
-      SET_AR_CHAR_BITNO (ARn, GET_AR_CHAR (ARn), 8);
+      SET_AR_CHAR_BITNO (cpup, ARn, GET_AR_CHAR (ARn), 8);
 
     if (GET_A (cpu.cu.IWB))
       {
@@ -2195,7 +2195,7 @@ void abd (void)
           {
             //cpu.AR[ARn].CHAR = (bits % 36) / 9;
             //cpu.AR[ARn].BITNO = bits % 9;
-            SET_AR_CHAR_BITNO (ARn, (bits % 36) / 9,
+            SET_AR_CHAR_BITNO (cpup, ARn, (bits % 36) / 9,
                                     bits % 9);
           }
       }
@@ -2208,7 +2208,7 @@ void abd (void)
           {
             //cpu.AR[ARn].CHAR = (r % 36) / 9;
             //cpu.AR[ARn].BITNO = r % 9;
-            SET_AR_CHAR_BITNO (ARn, (r % 36) / 9,
+            SET_AR_CHAR_BITNO (cpup, ARn, (r % 36) / 9,
                                     r % 9);
           }
       }
@@ -2344,11 +2344,11 @@ sim_printf ("abd sum 0%o %d.\n", sum, sum);
     cpu.AR[ARn].WORDNO = (sum / 36) & AMASK;
 #ifdef SEPARATE
     //cpu.AR[ARn].CHAR = (sum / 9) & MASK2;
-    SET_AR_CHAR_BITNO (ARn, (sum / 9) & MASK2, GET_AR_BITNO (ARn));
+    SET_AR_CHAR_BITNO (cpup, ARn, (sum / 9) & MASK2, GET_AR_BITNO (ARn));
 #else
     // Fails ISOLTS
     //SET_PR_BITNO (ARn, sum % 36);
-    SET_AR_CHAR_BITNO (ARn, (sum % 36) / 9, sum % 9);
+    SET_AR_CHAR_BITNO (cpup, ARn, (sum % 36) / 9, sum % 9);
 #endif
     HDBGRegAR (ARn);
 
@@ -2397,7 +2397,7 @@ void awd (void)
     sim_debug (DBG_TRACEEXT|DBG_CAC, & cpu_dev, "awd augend 0%o addend 0%o sum 0%o\n", augend, addend, sum);
 
     cpu.AR[ARn].WORDNO = (word18) sum & AMASK;
-    SET_AR_CHAR_BITNO (ARn, 0, 0);
+    SET_AR_CHAR_BITNO (cpup, ARn, 0, 0);
     HDBGRegAR (ARn);
   }
 
@@ -2410,7 +2410,7 @@ void sbd (void)
     // r is the count of bits (0 - 2^18 * 36 -1); 24 bits
     word24 r = getCrAR ((word4) reg) & MASK24;
     if (GET_AR_BITNO (ARn) > 8)
-      SET_AR_CHAR_BITNO (ARn, GET_AR_CHAR (ARn), 8);
+      SET_AR_CHAR_BITNO (cpup, ARn, GET_AR_CHAR (ARn), 8);
 
     if (GET_A (cpu.cu.IWB))
       {
@@ -2419,7 +2419,7 @@ void sbd (void)
                              address + bits / 36) & MASK18;
         if (r % 36)
           {
-            SET_AR_CHAR_BITNO (ARn, (- ((bits % 36) / 9)) & MASK2,
+            SET_AR_CHAR_BITNO (cpup, ARn, (- ((bits % 36) / 9)) & MASK2,
                                     (- (bits % 9)) & MASK4);
           }
       }
@@ -2428,7 +2428,7 @@ void sbd (void)
         cpu.AR[ARn].WORDNO = (- (address + r / 36)) & MASK18;
         if (r % 36)
           {
-            SET_AR_CHAR_BITNO (ARn, (- ((r % 36) / 9)) & MASK2,
+            SET_AR_CHAR_BITNO (cpup, ARn, (- ((r % 36) / 9)) & MASK2,
                                     (- (r % 9)) & MASK4);
           }
       }
@@ -2467,7 +2467,7 @@ void swd (void)
     sim_debug (DBG_TRACEEXT|DBG_CAC, & cpu_dev, "swd minued 0%o subtractend 0%o difference 0%o\n", minued, subtractend, difference);
 
     cpu.AR [ARn].WORDNO = (word18) difference & AMASK;
-    SET_AR_CHAR_BITNO (ARn, 0, 0);
+    SET_AR_CHAR_BITNO (cpup, ARn, 0, 0);
     HDBGRegAR (ARn);
   }
 
@@ -2499,7 +2499,7 @@ void s9bd (void)
           //{
             //cpu.AR[ARn].CHAR = ((cpu.AR[ARn].CHAR - r) % 4) & MASK2;
             //cpu.AR[ARn].CHAR = (cpu.AR[ARn].CHAR - r)  & MASK2;
-            SET_AR_CHAR_BITNO (ARn, (GET_AR_CHAR (ARn) - r)  & MASK2, 0);
+            SET_AR_CHAR_BITNO (cpup, ARn, (GET_AR_CHAR (ARn) - r)  & MASK2, 0);
           //}
       }
     else
@@ -2508,7 +2508,7 @@ void s9bd (void)
         //if (r % 36)
           //{
             //cpu.AR[ARn].CHAR = (-r) & MASK2;
-            SET_AR_CHAR_BITNO (ARn, (-r) & MASK2, 0);
+            SET_AR_CHAR_BITNO (cpup, ARn, (-r) & MASK2, 0);
           //}
       }
     //cpu.AR[ARn].BITNO = 0;
@@ -2883,7 +2883,7 @@ void asxbd (uint sz, bool sub)
 
     if (sz == 36)
       {
-        SET_AR_CHAR_BITNO (ARn, 0, 0);
+        SET_AR_CHAR_BITNO (cpup, ARn, 0, 0);
       }
     else
       {
@@ -2938,13 +2938,13 @@ void asxbd (uint sz, bool sub)
               };
             uint charno = tab [sum % 36u] [0];
             uint bitno = tab [sum % 36u] [1];
-            SET_AR_CHAR_BITNO (ARn, (word2) charno, (word4) bitno);
+            SET_AR_CHAR_BITNO (cpup, ARn, (word2) charno, (word4) bitno);
           }
         else
           {
             uint charno = (sum % 36u) / 9;
             uint bitno = sum % 9;
-            SET_AR_CHAR_BITNO (ARn, (word2) charno, (word4) bitno);
+            SET_AR_CHAR_BITNO (cpup, ARn, (word2) charno, (word4) bitno);
           }
       }
     HDBGRegAR (ARn);

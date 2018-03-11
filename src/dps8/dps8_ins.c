@@ -261,7 +261,7 @@ static void read_tra_op (cpu_state_t *cpu_p)
             if (get_addr_mode (cpu_p) == APPEND_mode)
               cpu_p->PR[n].SNR = cpu_p->PPR.PSR;
             cpu_p->PR[n].WORDNO = (cpu_p->PPR.IC + 1) & MASK18;
-            SET_PR_BITNO (n, 0);
+            SET_PR_BITNO (cpu_p, n, 0);
             HDBGRegPR (n);
           }
         cpu_p->PPR.IC = cpu_p->TPR.CA;
@@ -2734,7 +2734,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
             cpu_p->PR[n].RNR = cpu_p->TPR.TRR;
             cpu_p->PR[n].SNR = cpu_p->TPR.TSR;
             cpu_p->PR[n].WORDNO = cpu_p->TPR.CA;
-            SET_PR_BITNO (n, cpu_p->TPR.TBR);
+            SET_PR_BITNO (cpu_p, n, cpu_p->TPR.TBR);
             HDBGRegPR (n);
           }
           break;
@@ -2896,7 +2896,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
               if (((cpu_p->CY >> 34) & 3) != 3)
                 {
                   word6 bitno = (cpu_p->CY >> 30) & 077;
-                  SET_PR_BITNO (n, bitno);
+                  SET_PR_BITNO (cpu_p, n, bitno);
                 }
               else
                 {
@@ -3018,7 +3018,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
             cpu_p->PR[n].RNR = cpu_p->TPR.TRR;
             cpu_p->PR[n].SNR = cpu_p->TPR.TSR;
             cpu_p->PR[n].WORDNO = 0;
-            SET_PR_BITNO (n, 0);
+            SET_PR_BITNO (cpu_p, n, 0);
             HDBGRegPR (n);
           }
           break;
@@ -6229,7 +6229,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
           //  C(TPR.TBR) -> C(PRn.BITNO)
           CPTUR (cptUsePRn + 0);
           cpu_p->PR[0].WORDNO = cpu_p->TPR.CA;
-          SET_PR_BITNO (0, cpu_p->TPR.TBR);
+          SET_PR_BITNO (cpu_p, 0, cpu_p->TPR.TBR);
           HDBGRegPR (0);
           break;
 
@@ -6239,7 +6239,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
           //  C(TPR.TBR) -> C(PRn.BITNO)
           CPTUR (cptUsePRn + 1);
           cpu_p->PR[1].WORDNO = cpu_p->TPR.CA;
-          SET_PR_BITNO (1, cpu_p->TPR.TBR);
+          SET_PR_BITNO (cpu_p, 1, cpu_p->TPR.TBR);
           HDBGRegPR (1);
           break;
 
@@ -6249,7 +6249,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
           //  C(TPR.TBR) -> C(PRn.BITNO)
           CPTUR (cptUsePRn + 2);
           cpu_p->PR[2].WORDNO = cpu_p->TPR.CA;
-          SET_PR_BITNO (2, cpu_p->TPR.TBR);
+          SET_PR_BITNO (cpu_p, 2, cpu_p->TPR.TBR);
           HDBGRegPR (2);
           break;
 
@@ -6259,7 +6259,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
           //  C(TPR.TBR) -> C(PRn.BITNO)
           CPTUR (cptUsePRn + 3);
           cpu_p->PR[3].WORDNO = cpu_p->TPR.CA;
-          SET_PR_BITNO (3, cpu_p->TPR.TBR);
+          SET_PR_BITNO (cpu_p, 3, cpu_p->TPR.TBR);
           HDBGRegPR (3);
           break;
 
@@ -6269,7 +6269,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
           //  C(TPR.TBR) -> C(PRn.BITNO)
           CPTUR (cptUsePRn + 4);
           cpu_p->PR[4].WORDNO = cpu_p->TPR.CA;
-          SET_PR_BITNO (4, cpu_p->TPR.TBR);
+          SET_PR_BITNO (cpu_p, 4, cpu_p->TPR.TBR);
           HDBGRegPR (4);
           break;
 
@@ -6279,7 +6279,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
           //  C(TPR.TBR) -> C(PRn.BITNO)
           CPTUR (cptUsePRn + 5);
           cpu_p->PR[5].WORDNO = cpu_p->TPR.CA;
-          SET_PR_BITNO (5, cpu_p->TPR.TBR);
+          SET_PR_BITNO (cpu_p, 5, cpu_p->TPR.TBR);
           HDBGRegPR (5);
           break;
 
@@ -6289,7 +6289,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
           //  C(TPR.TBR) -> C(PRn.BITNO)
           CPTUR (cptUsePRn + 6);
           cpu_p->PR[6].WORDNO = cpu_p->TPR.CA;
-          SET_PR_BITNO (6, cpu_p->TPR.TBR);
+          SET_PR_BITNO (cpu_p, 6, cpu_p->TPR.TBR);
           HDBGRegPR (6);
           break;
 
@@ -6299,7 +6299,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
           //  C(TPR.TBR) -> C(PRn.BITNO)
           CPTUR (cptUsePRn + 7);
           cpu_p->PR[7].WORDNO = cpu_p->TPR.CA;
-          SET_PR_BITNO (7, cpu_p->TPR.TBR);
+          SET_PR_BITNO (cpu_p, 7, cpu_p->TPR.TBR);
           HDBGRegPR (7);
           break;
 
@@ -6355,7 +6355,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
 // was 77777733
               if (bitno == 077)
                 bitno = 037;
-              SET_PR_BITNO (n, bitno);
+              SET_PR_BITNO (cpu_p, n, bitno);
               HDBGRegPR (n);
             }
 
@@ -6469,7 +6469,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
               CPTUR (cptUsePRn + n);
               cpu_p->PR[n].WORDNO += GETHI (cpu_p->CY);
               cpu_p->PR[n].WORDNO &= MASK18;
-              SET_PR_BITNO (n, 0);
+              SET_PR_BITNO (cpu_p, n, 0);
               HDBGRegPR (n);
           }
           break;
@@ -6486,7 +6486,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
               CPTUR (cptUsePRn + n);
               cpu_p->PR[n].WORDNO += GETHI (cpu_p->CY);
               cpu_p->PR[n].WORDNO &= MASK18;
-              SET_PR_BITNO (n, 0);
+              SET_PR_BITNO (cpu_p, n, 0);
               HDBGRegPR (n);
           }
           break;
@@ -8698,7 +8698,7 @@ elapsedtime ();
                   //   5      2    5
                   //   6      3    1
                   //   7      3    5
-                  //SET_AR_CHAR_BITNO (n, CN/2, 4 * (CN % 2) + 1);
+                  //SET_AR_CHAR_BITNO (cpu_p, n, CN/2, 4 * (CN % 2) + 1);
 
                   // According to ISOLTS ps805
                   //  CN   CHAR  BIT
@@ -8710,7 +8710,7 @@ elapsedtime ();
                   //   5      2    5
                   //   6      3    0
                   //   7      3    5
-                  SET_AR_CHAR_BITNO (n, (word2) (CN/2), (CN % 2) ? 5 : 0);
+                  SET_AR_CHAR_BITNO (cpu_p, n, (word2) (CN/2), (CN % 2) ? 5 : 0);
                         
                   break;
 
@@ -8720,14 +8720,14 @@ elapsedtime ();
                   if (CN > 5)
                     {
                       cpu_p->AR[n].WORDNO = 0;
-                      SET_AR_CHAR_BITNO (n, 0, 0);
+                      SET_AR_CHAR_BITNO (cpu_p, n, 0, 0);
                       doFault (cpu_p, FAULT_IPR, fst_ill_proc, "aarn TN > 5");
                     }
 
                   // If C(Y)21,22 = 01 (TA code = 1), then
                   //   (6 * C(Y)18,20) / 9 -> C(ARn.CHAR)
                   //   (6 * C(Y)18,20)mod9 -> C(ARn.BITNO)
-                  SET_AR_CHAR_BITNO (n, (word2) ((6 * CN) / 9),
+                  SET_AR_CHAR_BITNO (cpu_p, n, (word2) ((6 * CN) / 9),
                                      (6 * CN) % 9);
                   break;
 
@@ -8736,14 +8736,14 @@ elapsedtime ();
                   //   C(Y)18,19 -> C(ARn.CHAR)
                   //   0000 -> C(ARn.BITNO)
                   // remember, 9-bit CN's are funky
-                  SET_AR_CHAR_BITNO (n, (word2) (CN >> 1), 0);
+                  SET_AR_CHAR_BITNO (cpu_p, n, (word2) (CN >> 1), 0);
                   break;
 
                 case CTAILL: // 3
                   // If C(Y)21,22 = 11 (TA code = 3) an illegal procedure
                   // fault occurs.
                   cpu_p->AR[n].WORDNO = 0;
-                  SET_AR_CHAR_BITNO (n, 0, 0);
+                  SET_AR_CHAR_BITNO (cpu_p, n, 0, 0);
                   HDBGRegAR (n);
                   doFault (cpu_p, FAULT_IPR, fst_ill_proc, "aarn TA = 3");
               }
@@ -8773,7 +8773,7 @@ elapsedtime ();
             CPTUR (cptUsePRn + n);
             cpu_p->AR[n].WORDNO = GETHI (cpu_p->CY);
 // AL-38 implies CHAR/BITNO, but ISOLTS requires PR.BITNO.
-            SET_AR_CHAR_BITNO (n,  getbits36_2 (cpu_p->CY, 18),
+            SET_AR_CHAR_BITNO (cpu_p, n,  getbits36_2 (cpu_p->CY, 18),
                                getbits36_4 (cpu_p->CY, 20));
             HDBGRegAR (n);
           }
@@ -8789,7 +8789,7 @@ elapsedtime ();
               CPTUR (cptUsePRn + n);
               word36 tmp36 = cpu_p->Yblock8[n];
               cpu_p->AR[n].WORDNO = getbits36_18 (tmp36, 0);
-              SET_AR_CHAR_BITNO (n,  getbits36_2 (tmp36, 18),
+              SET_AR_CHAR_BITNO (cpu_p, n,  getbits36_2 (tmp36, 18),
                                  getbits36_4 (tmp36, 20));
               HDBGRegAR (n);
             }
@@ -8842,7 +8842,7 @@ elapsedtime ();
                     //   5      2    5
                     //   6      3    1
                     //   7      3    5
-                    //SET_AR_CHAR_BITNO (n, CN/2, 4 * (CN % 2) + 1);
+                    //SET_AR_CHAR_BITNO (cpu_p, n, CN/2, 4 * (CN % 2) + 1);
 
                     // According to ISOLTS ps805
                     //  CN   CHAR  BIT
@@ -8854,7 +8854,7 @@ elapsedtime ();
                     //   5      2    5
                     //   6      3    0
                     //   7      3    5
-                    SET_AR_CHAR_BITNO (n, (word2) (CN/2), (CN % 2) ? 5 : 0);
+                    SET_AR_CHAR_BITNO (cpu_p, n, (word2) (CN/2), (CN % 2) ? 5 : 0);
                         
                     break;
 
@@ -8868,7 +8868,7 @@ elapsedtime ();
                   // If C(Y)21 = 0 (TN code = 0), then
                   //   C(Y)18,20 -> C(ARn.CHAR)
                   //   0000 -> C(ARn.BITNO)
-                  SET_AR_CHAR_BITNO (n, (word2) CN, 0);
+                  SET_AR_CHAR_BITNO (cpu_p, n, (word2) CN, 0);
                   break;
               }
             HDBGRegAR (n);

@@ -1011,8 +1011,8 @@ typedef struct
     word36 IRODD; /* Instr holding register; odd word of last pair fetched */
  } ctl_unit_data_t;
 
-#define USE_IRODD (cpu.cu.rd && ((cpu. PPR.IC & 1) != 0)) 
-#define IWB_IRODD (USE_IRODD ? cpu.cu.IRODD : cpu.cu.IWB)
+#define USE_IRODD (cpu_p->cu.rd && ((cpu_p->PPR.IC & 1) != 0)) 
+#define IWB_IRODD (USE_IRODD ? cpu_p->cu.IRODD : cpu_p->cu.IWB)
 
 #ifdef L68
 enum du_cycle1_e
@@ -1816,20 +1816,20 @@ extern uint current_running_cpu_idx;
 
 // Support code to access ARn.BITNO, ARn.CHAR, PRn.BITNO
 
-#define GET_PR_BITNO(n) (cpu.PAR[n].PR_BITNO)
-#define GET_AR_BITNO(n) (cpu.PAR[n].AR_BITNO)
-#define GET_AR_CHAR(n) (cpu.PAR[n].AR_CHAR)
-static inline void SET_PR_BITNO (uint n, word6 b)
+#define GET_PR_BITNO(n) (cpu_p->PAR[n].PR_BITNO)
+#define GET_AR_BITNO(n) (cpu_p->PAR[n].AR_BITNO)
+#define GET_AR_CHAR(n) (cpu_p->PAR[n].AR_CHAR)
+static inline void SET_PR_BITNO (cpu_state_t *cpu_p, uint n, word6 b)
   {
-     cpu.PAR[n].PR_BITNO = b;
-     cpu.PAR[n].AR_BITNO = (b % 9) & MASK4;
-     cpu.PAR[n].AR_CHAR = (b / 9) & MASK2;
+     cpu_p->PAR[n].PR_BITNO = b;
+     cpu_p->PAR[n].AR_BITNO = (b % 9) & MASK4;
+     cpu_p->PAR[n].AR_CHAR = (b / 9) & MASK2;
   }
-static inline void SET_AR_CHAR_BITNO (uint n, word2 c, word4 b)
+static inline void SET_AR_CHAR_BITNO (cpu_state_t *cpu_p, uint n, word2 c, word4 b)
   {
-     cpu.PAR[n].PR_BITNO = c * 9 + b;
-     cpu.PAR[n].AR_BITNO = b & MASK4;
-     cpu.PAR[n].AR_CHAR = c & MASK2;
+     cpu_p->PAR[n].PR_BITNO = c * 9 + b;
+     cpu_p->PAR[n].AR_BITNO = b & MASK4;
+     cpu_p->PAR[n].AR_CHAR = c & MASK2;
   }
 
 
