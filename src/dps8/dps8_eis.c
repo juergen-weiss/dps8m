@@ -59,6 +59,8 @@
 
 #define DBG_CTR cpu.cycleCnt
 
+#define cpu_p cpup 
+
 //  Restart status
 //
 //  a6bd   n/a

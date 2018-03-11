@@ -36,6 +36,8 @@
 #include "dps8_math.h"
 #include "dps8_utils.h"
 
+#define cpu_p cpup
+
 #define DBG_CTR cpu.cycleCnt
 
 #ifdef __CYGWIN__

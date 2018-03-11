@@ -36,6 +36,8 @@
 #include "threadz.h"
 #endif
 
+#define cpu_p cpup
+
 #define DBG_CTR cpu.cycleCnt
 
 /*
