@@ -33,10 +33,10 @@
 #include "dps8_iom.h"
 #include "dps8_console.h"
 #include "dps8_sys.h"
+#include "dps8_cpu.h"
 #include "dps8_faults.h"
 #include "dps8_scu.h"
 #include "dps8_cable.h"
-#include "dps8_cpu.h"
 #include "dps8_mt.h"  // attachTape
 #include "dps8_disk.h"  // attachDisk
 #include "dps8_utils.h"

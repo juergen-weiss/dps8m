@@ -77,12 +77,12 @@ typedef struct dps8faults dps8faults;
 
 extern char * faultNames [N_FAULTS];
 void check_events (void);
-void clearFaultCycle (void);
+void clearFaultCycle (cpu_state_t *cpu_p);
 void emCallReportFault (void);
 
 //void cu_safe_restore (void);
 
-void doG7Fault(bool allowTR) NO_RETURN;
+void doG7Fault(cpu_state_t *cpu_p, bool allowTR) NO_RETURN;
 
 extern const _fault_subtype fst_zero;
 extern const _fault_subtype fst_acv9;
@@ -98,19 +98,19 @@ extern const _fault_subtype fst_cmd_lprpn;
 extern const _fault_subtype fst_cmd_ctl;
 extern const _fault_subtype fst_onc_nem;
  
-void doFault (_fault faultNumber, _fault_subtype faultSubtype, 
+void doFault (cpu_state_t *cpu_p, _fault faultNumber, _fault_subtype faultSubtype, 
               const char * faultMsg) NO_RETURN;
-void dlyDoFault (_fault faultNumber, _fault_subtype subFault, 
+void dlyDoFault (cpu_state_t *cpu_p, _fault faultNumber, _fault_subtype subFault, 
                 const char * faultMsg);
-bool bG7PendingNoTRO (void);
-bool bG7Pending (void);
+bool bG7PendingNoTRO (cpu_state_t *cpu_p);
+bool bG7Pending (cpu_state_t *cpu_p);
 void setG7fault (uint cpuNo, _fault faultNo, _fault_subtype subFault);
 //void doG7Fault (void);
-void clearTROFault (void);
-void advanceG7Faults (void);
+void clearTROFault (cpu_state_t *cpu_p);
+void advanceG7Faults (cpu_state_t *cpu_p);
 #ifdef L68
-void set_FFV_fault (uint f_fault_no);
-void do_FFV_fault (uint fault_number, const char * fault_msg);
+void set_FFV_fault (cpu_state_t *cpu_p, uint f_fault_no);
+void do_FFV_fault (cpu_state_t *cpu_p, uint fault_number, const char * fault_msg);
 #endif
 
 

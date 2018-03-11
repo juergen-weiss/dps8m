@@ -1335,13 +1335,13 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "%s sets XSF to %o\n", __func__, cpu_p->cu.X
     if (unlikely (cpu_p->isXED))
       {
         if (flags & NO_XED)
-            doFault (FAULT_IPR,
+            doFault (cpu_p, FAULT_IPR,
                      fst_ill_proc,
                      "Instruction not allowed in XEC/XED");
         // The even instruction from C(Y-pair) must not alter
         // C(Y-pair)36,71, and must not be another xed instruction.
         if (opcode == 0717 && !opcodeX && cpu_p->cu.xdo /* even instruction being executed */)
-            doFault (FAULT_IPR,
+            doFault (cpu_p, FAULT_IPR,
                      fst_ill_proc,
                      "XED of XED on even word");
         // ISOLTS 791 03k, 792 03k
@@ -1349,13 +1349,13 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "%s sets XSF to %o\n", __func__, cpu_p->cu.X
             // To Execute Double (XED) the RPD instruction, the RPD must be the second
             // instruction at an odd-numbered address.
             if (cpu_p->cu.xdo /* even instr being executed */)
-                doFault (FAULT_IPR,
+                doFault (cpu_p, FAULT_IPR,
                      (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC},
                      "XED of RPD on even word");
             // To execute an instruction pair having an rpd instruction as the odd
             // instruction, the xed instruction must be located at an odd address.
             if (!cpu_p->cu.xdo /* odd instr being executed */ && !(cpu_p->PPR.IC & 1))
-                doFault (FAULT_IPR,
+                doFault (cpu_p, FAULT_IPR,
                      (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC},
                      "XED of RPD on odd word, even IC");
         }
@@ -1363,7 +1363,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "%s sets XSF to %o\n", __func__, cpu_p->cu.X
         // To execute a rpd instruction, the xec instruction must be in an odd location.
         // ISOLTS 768 01w
         if (opcode == 0560 && !opcodeX && !cpu_p->cu.xde && !(cpu_p->PPR.IC & 1)) 
-            doFault (FAULT_IPR,
+            doFault (cpu_p, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC},
                  "XEC of RPx on even word");
     }
@@ -1421,7 +1421,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "%s sets XSF to %o\n", __func__, cpu_p->cu.X
         // this is really strange. possibly a bug in DPS8M HW (L68 handles it the same as all other instructions)
         if (RPx_fault && !opcodeX && opcode==0413) // rscr
           {
-              doFault (FAULT_IPR,
+              doFault (cpu_p, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=RPx_fault},
                  "DPS8M rscr early raise");
           }
@@ -1459,7 +1459,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "%s sets XSF to %o\n", __func__, cpu_p->cu.X
 
     if (unlikely (RPx_fault))
       {
-        doFault (FAULT_IPR,
+        doFault (cpu_p, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=RPx_fault},
                  "RPx test fail");
       }
@@ -1503,7 +1503,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "%s sets XSF to %o\n", __func__, cpu_p->cu.X
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpu_p, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -1519,7 +1519,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "%s sets XSF to %o\n", __func__, cpu_p->cu.X
         if (((opcode == 0232 || opcode == 0173) && opcodeX ) 
            || (opcode == 0257))
         {
-            doFault (FAULT_IPR,
+            doFault (cpu_p, FAULT_IPR,
                 (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault},
                 "Attempted execution of multics privileged instruction.");
         }
@@ -1541,16 +1541,16 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "%s sets XSF to %o\n", __func__, cpu_p->cu.X
             {
                 if (!get_bar_mode (cpu_p)) {
                     // ISOLTS-890 05ab
-                    doFault (FAULT_IPR,
+                    doFault (cpu_p, FAULT_IPR,
                         (_fault_subtype) {.fault_ipr_subtype=FR_ILL_SLV|mod_fault},
                         "Attempted execution of multics privileged instruction.");
                 } else {
-                    doFault (FAULT_IPR,
+                    doFault (cpu_p, FAULT_IPR,
                         (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault},
                         "Attempted execution of multics privileged instruction.");
                 }
             }
-            doFault (FAULT_IPR,
+            doFault (cpu_p, FAULT_IPR,
                 (_fault_subtype) {.fault_ipr_subtype=FR_ILL_SLV|mod_fault},
                 "Attempted execution of privileged instruction.");
           }
@@ -1563,11 +1563,11 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "%s sets XSF to %o\n", __func__, cpu_p->cu.X
           // ISOLTS 890 06a
           // ISOLTS says that L68 handles this in the same way
           if (opcode == 0230 && !opcodeX) {
-            doFault (FAULT_IPR,
+            doFault (cpu_p, FAULT_IPR,
                 (_fault_subtype) {.fault_ipr_subtype=FR_ILL_SLV|mod_fault},
                 "Attempted BAR execution of nonprivileged instruction.");
           } else
-            doFault (FAULT_IPR,
+            doFault (cpu_p, FAULT_IPR,
                 (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault},
                 "Attempted BAR execution of nonprivileged instruction.");
       }
@@ -1576,7 +1576,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "%s sets XSF to %o\n", __func__, cpu_p->cu.X
     // DPS8M raises it delayed
     if (unlikely (mod_fault))
       {
-        doFault (FAULT_IPR,
+        doFault (cpu_p, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -2161,7 +2161,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "executeInstruction not EIS sets XSF to %o\n
 #endif
           {
             CPT (cpt2L, 14); // Delayed fault
-            doFault (cpu_p->dlyFltNum, cpu_p->dlySubFltNum, cpu_p->dlyCtx);
+            doFault (cpu_p, cpu_p->dlyFltNum, cpu_p->dlySubFltNum, cpu_p->dlyCtx);
           }
 
 // Sadly, it fixes ISOLTS 769 test 02a and 02b.
@@ -2294,7 +2294,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "executeInstruction not EIS sets XSF to %o\n
     if (unlikely (cpu_p->dlyFlt))
       {
         CPT (cpt2L, 14); // Delayed fault
-        doFault (cpu_p->dlyFltNum, cpu_p->dlySubFltNum, cpu_p->dlyCtx);
+        doFault (cpu_p, cpu_p->dlyFltNum, cpu_p->dlySubFltNum, cpu_p->dlyCtx);
       }
 ///
 /// executeInstruction: simh hooks
@@ -2369,9 +2369,9 @@ static inline void overflow (cpu_state_t *cpu_p, bool ovf, bool dly, const char 
                 SET_I_TALLY;
               }
             if (dly)
-              dlyDoFault (FAULT_OFL, fst_zero, msg);
+              dlyDoFault (cpu_p, FAULT_OFL, fst_zero, msg);
             else
-              doFault (FAULT_OFL, fst_zero, msg);
+              doFault (cpu_p, FAULT_OFL, fst_zero, msg);
           }
       }
   }
@@ -2916,7 +2916,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
                     // Therefore the subfault well no illegal action, and
                     // Multics will peek it the instruction to deduce that it
                     // is a lprpn fault.
-                  doFault (FAULT_CMD, fst_cmd_lprpn, "lprpn");
+                  doFault (cpu_p, FAULT_CMD, fst_cmd_lprpn, "lprpn");
                 }
 // The SPRPn instruction stores only the low 12 bits of the 15 bit SNR.
 // A special case is made for an SNR of all ones; it is stored as 12 1's.
@@ -4813,7 +4813,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
                   HDBGRegQ ();
                 }
 
-              dlyDoFault (FAULT_DIV,
+              dlyDoFault (cpu_p, FAULT_DIV,
                           fst_ill_op,
                           "div divide check");
             }
@@ -5857,14 +5857,14 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
               {
                 SET_I_EOFL;
                 if (tstOVFfault (cpu_p))
-                  doFault (FAULT_OFL, fst_zero, "ade exp overflow fault");
+                  doFault (cpu_p, FAULT_OFL, fst_zero, "ade exp overflow fault");
               }
 
             if (e < -128)
               {
                 SET_I_EUFL;
                 if (tstOVFfault (cpu_p))
-                  doFault (FAULT_OFL, fst_zero, "ade exp underflow fault");
+                  doFault (cpu_p, FAULT_OFL, fst_zero, "ade exp underflow fault");
               }
           }
           break;
@@ -6113,7 +6113,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
           do_caf (cpu_p);
           if (cpu_p->TPR.CA >= ((word18) cpu_p->BAR.BOUND) << 9)
             {
-              doFault (FAULT_ACV, fst_acv15, "TSS boundary violation");
+              doFault (cpu_p, FAULT_ACV, fst_acv15, "TSS boundary violation");
             }
           read_tra_op (cpu_p);
           CLR_I_NBAR;
@@ -6444,7 +6444,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
             // be changed.
 
             if ((cpu_p->PR[n].SNR & 070000) != 0 && cpu_p->PR[n].SNR != MASK15)
-              doFault (FAULT_STR, fst_str_ptr, "sprpn");
+              doFault (cpu_p, FAULT_STR, fst_str_ptr, "sprpn");
 
             cpu_p->CY  =  ((word36) (GET_PR_BITNO(n) & 077)) << 30;
             // lower 12- of 15-bits
@@ -6517,7 +6517,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
               {
                 sim_warn ("rccl on CPU %u port %d has no SCU; faulting\n",
                           current_running_cpu_idx, cpu_port_num);
-                doFault (FAULT_ONC, fst_onc_nem, "(rccl)");
+                doFault (cpu_p, FAULT_ONC, fst_onc_nem, "(rccl)");
               }
             uint scuUnitIdx = get_scu_idx (current_running_cpu_idx, cpu_port_num);
 
@@ -6574,7 +6574,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
             {
               return STOP_STOP;
             }
-          doFault (FAULT_DRL, fst_zero, "drl");
+          doFault (cpu_p, FAULT_DRL, fst_zero, "drl");
 
         case x0 (0716):  // xec
           cpu_p->cu.xde = 1;
@@ -6639,28 +6639,28 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
           // instruction pair at main memory location C+4. The value of C is
           // obtained from the FAULT VECTOR switches on the processor
           // configuration panel.
-          doFault (FAULT_MME, fst_zero, "Master Mode Entry (mme)");
+          doFault (cpu_p, FAULT_MME, fst_zero, "Master Mode Entry (mme)");
 
         case x0 (0004):   // mme2
           // Causes a fault that fetches and executes, in absolute mode, the
           // instruction pair at main memory location C+(52)8. The value of C
           // is obtained from the FAULT VECTOR switches on the processor
           // configuration panel.
-          doFault (FAULT_MME2, fst_zero, "Master Mode Entry 2 (mme2)");
+          doFault (cpu_p, FAULT_MME2, fst_zero, "Master Mode Entry 2 (mme2)");
 
         case x0 (0005):   // mme3
           // Causes a fault that fetches and executes, in absolute mode, the
           // instruction pair at main memory location C+(54)8. The value of C
           // is obtained from the FAULT VECTOR switches on the processor
           // configuration panel.
-          doFault (FAULT_MME3, fst_zero, "Master Mode Entry 3 (mme3)");
+          doFault (cpu_p, FAULT_MME3, fst_zero, "Master Mode Entry 3 (mme3)");
 
         case x0 (0007):   // mme4
           // Causes a fault that fetches and executes, in absolute mode, the
           // instruction pair at main memory location C+(56)8. The value of C
           // is obtained from the FAULT VECTOR switches on the processor
           // configuration panel.
-          doFault (FAULT_MME4, fst_zero, "Master Mode Entry 4 (mme4)");
+          doFault (cpu_p, FAULT_MME4, fst_zero, "Master Mode Entry 4 (mme4)");
 
         case x0 (0011):   // nop
           break;
@@ -6676,7 +6676,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
         case x0 (0560):  // rpd
           {
             if ((cpu_p->PPR.IC & 1) == 0)
-              doFault (FAULT_IPR, fst_ill_proc, "rpd odd");
+              doFault (cpu_p, FAULT_IPR, fst_ill_proc, "rpd odd");
             cpu_p->cu.delta = i->tag;
             // a:AL39/rpd1
             word1 c = (i->address >> 7) & 1;
@@ -7006,7 +7006,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
                 break;
 
               default:
-                doFault (FAULT_IPR,
+                doFault (cpu_p, FAULT_IPR,
                          fst_ill_mod,
                          "lcpr tag invalid");
 
@@ -7035,7 +7035,7 @@ elapsedtime ();
           // experience TRO while masked, setting the TR to -1, and
           // experiencing an unexpected TRo interrupt when unmasking.
           // Reset any pending TRO fault when the TR is loaded.
-          clearTROFault ();
+          clearTROFault (cpu_p);
           break;
 
         case x1 (0257):  // lptp
@@ -7352,7 +7352,7 @@ elapsedtime ();
 
                 default:
                   {
-                    doFault (FAULT_IPR,
+                    doFault (cpu_p, FAULT_IPR,
                              fst_ill_mod,
                              "SCPR Illegal register select value");
                   }
@@ -7889,7 +7889,7 @@ elapsedtime ();
                 else
                   putbits36 (& cpu_p->faultRegister[0], 28, 4, 010);
 
-                doFault (FAULT_CMD, fst_cmd_ctl, "(rscr)");
+                doFault (cpu_p, FAULT_CMD, fst_cmd_ctl, "(rscr)");
               }
             uint scuUnitIdx = get_scu_idx (current_running_cpu_idx, cpu_port_num);
 #ifdef PANEL
@@ -8359,7 +8359,7 @@ elapsedtime ();
                 default:
                   // XXX Guessing values; also don't know if this is actually
                   //  a fault
-                  doFault (FAULT_IPR,
+                  doFault (cpu_p, FAULT_IPR,
                            fst_ill_mod,
                            "Illegal register select value");
               }
@@ -8385,11 +8385,11 @@ elapsedtime ();
             // If the there is no port to that memory location, fault
             if (cpu_port_num < 0)
               {
-                doFault (FAULT_ONC, fst_onc_nem, "(cioc)");
+                doFault (cpu_p, FAULT_ONC, fst_onc_nem, "(cioc)");
               }
             if (! get_scu_in_use (current_running_cpu_idx, cpu_port_num))
               {
-                doFault (FAULT_ONC, fst_onc_nem, "(cioc)");
+                doFault (cpu_p, FAULT_ONC, fst_onc_nem, "(cioc)");
               }
             uint scuUnitIdx = get_scu_idx (current_running_cpu_idx, cpu_port_num);
 
@@ -8471,7 +8471,7 @@ elapsedtime ();
                 else if (cpu_port_num == 3)
                   putbits36 (& cpu_p->faultRegister[0], 28, 4, 010);
 // XXX What if the port is > 3?
-                doFault (FAULT_CMD, fst_cmd_ctl, "(smic)");
+                doFault (cpu_p, FAULT_CMD, fst_cmd_ctl, "(smic)");
 #endif
               }
             uint scuUnitIdx = get_scu_idx (current_running_cpu_idx, cpu_port_num);
@@ -8503,7 +8503,7 @@ elapsedtime ();
                   putbits36_4 (& cpu_p->faultRegister[0], 24, 010);
                 else
                   putbits36 (& cpu_p->faultRegister[0], 28, 4, 010);
-                doFault (FAULT_CMD, fst_cmd_ctl, "(sscr)");
+                doFault (cpu_p, FAULT_CMD, fst_cmd_ctl, "(sscr)");
               }
             uint scuUnitIdx = get_scu_idx (current_running_cpu_idx, cpu_port_num);
             t_stat rc = scu_sscr ((uint) scuUnitIdx, current_running_cpu_idx,
@@ -8542,7 +8542,7 @@ elapsedtime ();
           // with this, but this seems to work. (I would hazard a guess
           // that DIS was doing a continuous FETCH/EXECUTE cycle 
           // ('if !interrupt goto .'))
-          advanceG7Faults ();
+          advanceG7Faults (cpu_p);
 
           if ((! cpu_p->switches.tro_enable) &&
               (! sample_interrupts (cpu_p)) &&
@@ -8615,7 +8615,7 @@ elapsedtime ();
 // Implementing TRO according to AL39 for the DIS cause caues idle systems to
 // hang in the DIS instruction. Revert back to the old behavior.
 #if 1
-          if (GET_I (cpu_p->cu.IWB) ? bG7PendingNoTRO () : bG7Pending ())
+          if (GET_I (cpu_p->cu.IWB) ? bG7PendingNoTRO (cpu_p) : bG7Pending (cpu_p))
 #else
           //if (GET_I (cpu_p->cu.IWB) ? bG7PendingNoTRO () : bG7Pending ())
           // Don't check timer runout if in absolute mode, privledged, or
@@ -8668,7 +8668,7 @@ elapsedtime ();
             PNL (L68_ (DU_CYCLE_DDU_LDEA;))
 
             if (getbits36_1 (cpu_p->CY, 23) != 0)
-              doFault (FAULT_IPR,
+              doFault (cpu_p, FAULT_IPR,
                        fst_ill_proc,
                        "aarn C(Y)23 != 0");
 
@@ -8721,7 +8721,7 @@ elapsedtime ();
                     {
                       cpu_p->AR[n].WORDNO = 0;
                       SET_AR_CHAR_BITNO (n, 0, 0);
-                      doFault (FAULT_IPR, fst_ill_proc, "aarn TN > 5");
+                      doFault (cpu_p, FAULT_IPR, fst_ill_proc, "aarn TN > 5");
                     }
 
                   // If C(Y)21,22 = 01 (TA code = 1), then
@@ -8745,7 +8745,7 @@ elapsedtime ();
                   cpu_p->AR[n].WORDNO = 0;
                   SET_AR_CHAR_BITNO (n, 0, 0);
                   HDBGRegAR (n);
-                  doFault (FAULT_IPR, fst_ill_proc, "aarn TA = 3");
+                  doFault (cpu_p, FAULT_IPR, fst_ill_proc, "aarn TA = 3");
               }
             HDBGRegAR (n);
           }
@@ -8862,7 +8862,7 @@ elapsedtime ();
                   // If C(Y)21 = 0 (TN code = 0) and C(Y)20 = 1 an
                   // illegal procedure fault occurs.
                   if ((CN & 1) != 0)
-                    doFault (FAULT_IPR, fst_ill_proc, "narn N9 and CN odd");
+                    doFault (cpu_p, FAULT_IPR, fst_ill_proc, "narn N9 and CN odd");
                   // The character number is in bits 18-19; recover it
                   CN >>= 1;
                   // If C(Y)21 = 0 (TN code = 0), then
@@ -8898,11 +8898,11 @@ elapsedtime ();
                 // If C(Y)21,22 = 11 (TA code = 3) or C(Y)23 = 1 (unused bit),
                 // an illegal procedure fault occurs.
                 if (TA == 03)
-                  doFault (FAULT_IPR,
+                  doFault (cpu_p, FAULT_IPR,
                            fst_ill_proc,
                            "ARAn tag == 3");
                 if (getbits36_1 (cpu_p->CY, 23) != 0)
-                  doFault (FAULT_IPR,
+                  doFault (cpu_p, FAULT_IPR,
                            fst_ill_proc,
                            "ARAn b23 == 1");
 
@@ -9279,7 +9279,7 @@ elapsedtime ();
         default:
           if (cpu_p->switches.halt_on_unimp)
             return STOP_STOP;
-          doFault (FAULT_IPR,
+          doFault (cpu_p, FAULT_IPR,
                    fst_ill_op,
                    "Illegal instruction");
       }
@@ -9770,7 +9770,7 @@ elapsedtime ();
         longjmp (cpu_p->jmpMain, JMP_RESTART);
       }
     sim_printf ("doRCU dies with unhandled fault number %d\n", cpu_p->cu.FI_ADDR);
-    doFault (FAULT_TRB,
+    doFault (cpu_p, FAULT_TRB,
              (_fault_subtype) {.bits=cpu_p->cu.FI_ADDR},
              "doRCU dies with unhandled fault number");
   }

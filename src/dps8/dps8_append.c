@@ -21,11 +21,11 @@
 #include <stdio.h>
 #include "dps8.h"
 #include "dps8_sys.h"
+#include "dps8_cpu.h"
 #include "dps8_faults.h"
 #include "dps8_scu.h"
 #include "dps8_iom.h"
 #include "dps8_cable.h"
-#include "dps8_cpu.h"
 #include "dps8_append.h"
 #include "dps8_addrmods.h"
 #include "dps8_utils.h"
@@ -245,7 +245,7 @@ static void fetch_dsptw (cpu_state_t *cpu_p, word15 segno)
         // generate access violation, out of segment bounds fault
         PNL (cpu_p->acvFaults |= ACV15;)
         PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
-        doFault (FAULT_ACV, fst_acv15,
+        doFault (cpu_p, FAULT_ACV, fst_acv15,
                  "acvFault: fetch_dsptw out of segment bounds fault");
       }
     set_apu_status (cpu_p, apuStatus_DSPTW);
@@ -512,7 +512,7 @@ static void fetch_nsdw (cpu_state_t *cpu_p, word15 segno)
         // generate access violation, out of segment bounds fault
         PNL (cpu_p->acvFaults |= ACV15;)
         PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
-        doFault (FAULT_ACV, fst_acv15,
+        doFault (cpu_p, FAULT_ACV, fst_acv15,
                  "acvFault fetch_dsptw: out of segment bounds fault");
       }
     DBGAPP ("%s (2):fetching SDW from %05o\n",
@@ -1085,7 +1085,7 @@ static void do_ptw2 (cpu_state_t *cpu_p, sdw_s *sdw, word18 offset)
        //Is PTW2.F set ON?
        if (! PTW2.DF)
            // initiate a directed fault
-           doFault (FAULT_DF0 + PTW2.FC, fst_zero, "PTW2.F == 0");
+           doFault (cpu_p, FAULT_DF0 + PTW2.FC, fst_zero, "PTW2.F == 0");
 
   }
 
@@ -1430,7 +1430,7 @@ A:;
         
         if (! cpu_p->PTW0.DF)
          {
-          doFault (FAULT_DF0 + cpu_p->PTW0.FC, fst_zero, 
+          doFault (cpu_p, FAULT_DF0 + cpu_p->PTW0.FC, fst_zero, 
                    "do_append_cycle(A): PTW0.F == 0");
          }
         
@@ -1453,7 +1453,7 @@ A:;
             DBGAPP ("do_append_cycle(A): SDW0.F == 0! "
                     "Initiating directed fault\n");
             // initiate a directed fault ...
-            doFault (FAULT_DF0 + cpu_p->SDW0.FC, fst_zero, "SDW0.F == 0");
+            doFault (cpu_p, FAULT_DF0 + cpu_p->SDW0.FC, fst_zero, "SDW0.F == 0");
           }
       }
 
@@ -1475,7 +1475,7 @@ A:;
             fetch_dsptw (cpu_p, cpu_p->TPR.TSR);
             
             if (! cpu_p->PTW0.DF)
-              doFault (FAULT_DF0 + cpu_p->PTW0.FC, fst_zero,
+              doFault (cpu_p, FAULT_DF0 + cpu_p->PTW0.FC, fst_zero,
                        "do_append_cycle(A): PTW0.F == 0");
             
             if (! cpu_p->PTW0.U)
@@ -1493,7 +1493,7 @@ A:;
                 DBGAPP ("do_append_cycle(A): SDW0.F == 0! "
                         "Initiating directed fault\n");
                 // initiate a directed fault ...
-                doFault (FAULT_DF0 + cpu_p->SDW0.FC, fst_zero, "SDW0.F == 0");
+                doFault (cpu_p, FAULT_DF0 + cpu_p->SDW0.FC, fst_zero, "SDW0.F == 0");
               }
           }
         // load SDWAM .....
@@ -1877,7 +1877,7 @@ G:;
         DBGAPP ("do_append_cycle(G) acvFaults\n");
         PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         // Initiate an access violation fault
-        doFault (FAULT_ACV, (_fault_subtype) {.fault_acv_subtype=cpu_p->acvFaults},
+        doFault (cpu_p, FAULT_ACV, (_fault_subtype) {.fault_acv_subtype=cpu_p->acvFaults},
                  "ACV fault");
       }
 
@@ -1897,7 +1897,7 @@ G:;
         if (thisCycle != ABSA_CYCLE)
           {
             // initiate a directed fault
-            doFault (FAULT_DF0 + cpu_p->PTW0.FC, fst_zero, "PTW0.F == 0");
+            doFault (cpu_p, FAULT_DF0 + cpu_p->PTW0.FC, fst_zero, "PTW0.F == 0");
           }
       } 
     // load PTW0 POINTER, always bypass PTWAM
@@ -1914,7 +1914,7 @@ G:;
             if (thisCycle != ABSA_CYCLE)
               {
                 // initiate a directed fault
-                doFault (FAULT_DF0 + cpu_p->PTW0.FC, (_fault_subtype) {.bits=0},
+                doFault (cpu_p, FAULT_DF0 + cpu_p->PTW0.FC, (_fault_subtype) {.bits=0},
                          "PTW0.F == 0");
               }
           }

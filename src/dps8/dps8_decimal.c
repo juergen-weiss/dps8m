@@ -28,11 +28,11 @@
 
 #include "dps8.h"
 #include "dps8_sys.h"
+#include "dps8_cpu.h"
 #include "dps8_faults.h"
 #include "dps8_scu.h"
 #include "dps8_iom.h"
 #include "dps8_cable.h"
-#include "dps8_cpu.h"
 #include "dps8_decimal.h"
 #include "dps8_eis.h"
 #include "dps8_utils.h"
@@ -136,7 +136,7 @@ decNumber * decBCD9ToNumber(const word9 *bcd, Int length, const Int scale, decNu
             decNumberZero(dn);
             //return NULL;
             // XXX check subfault
-            doFault (FAULT_IPR, fst_ill_proc, "decBCD9ToNumber underflow");
+            doFault (cpup, FAULT_IPR, fst_ill_proc, "decBCD9ToNumber underflow");
         }
     }
     else  // -ve scale; +ve exponent
@@ -148,7 +148,7 @@ decNumber * decBCD9ToNumber(const word9 *bcd, Int length, const Int scale, decNu
             decNumberZero(dn);
             //return NULL;
             // XXX check subfault
-            doFault (FAULT_IPR, fst_ill_proc, "decBCD9ToNumber overflow");
+            doFault (cpup, FAULT_IPR, fst_ill_proc, "decBCD9ToNumber overflow");
         }
     }
     if (digits==0)
@@ -162,7 +162,7 @@ decNumber * decBCD9ToNumber(const word9 *bcd, Int length, const Int scale, decNu
         // got a digit, in nib
         //if (nib>9) {decNumberZero(dn); return NULL;}    // bad digit
         if (nib > 9)
-          doFault (FAULT_IPR, fst_ill_dig, "decBCD9ToNumber ill digit");
+          doFault (cpup, FAULT_IPR, fst_ill_dig, "decBCD9ToNumber ill digit");
         
         if (cut==0)
           *up=(Unit)nib;

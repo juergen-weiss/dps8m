@@ -46,11 +46,11 @@
 
 #include "dps8.h"
 #include "dps8_sys.h"
+#include "dps8_cpu.h"
 #include "dps8_faults.h"
 #include "dps8_scu.h"
 #include "dps8_iom.h"
 #include "dps8_cable.h"
-#include "dps8_cpu.h"
 #include "dps8_iefp.h"
 #include "dps8_decimal.h"
 #include "dps8_ins.h"
@@ -2999,11 +2999,11 @@ void cmpc (void)
     
     // Bits 9-10 MBZ
     if (IWB_IRODD & 0000600000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "cmpc 9-10 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "cmpc 9-10 MBZ");
 
     // Bit 23 of OP1 MBZ
     if (!(e->MF[0] & MFkID) && e -> op [0]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "cmpc op1 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "cmpc op1 23 MBZ");
 
 // ISOLTS ps846    test-07a    dec add test
 // Sets TA2 to the same as TA1. AL39 says TA2 ignored.
@@ -3014,14 +3014,14 @@ void cmpc (void)
     // if (e -> op [1]  & 0000000070000)
     // Bit 23 of OP2 MBZ
     if (!(e->MF[1] & MFkID) && e -> op [1]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "cmpc op2 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "cmpc op2 23 MBZ");
 #endif
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -3130,7 +3130,7 @@ void scd ()
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -3140,22 +3140,22 @@ void scd ()
     if (IWB_IRODD & 0777600000000)
       {
         //sim_printf ("scd %12"PRIo64"\n", IWB_IRODD);
-        doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "scd 0-10 MBZ");
+        doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "scd 0-10 MBZ");
       }
 
     // Bit 23 of OP1 MBZ
     if (!(e->MF[0] & MFkID) && e -> op [0]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scd op1 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scd op1 23 MBZ");
 
     // Bits 18-28. 30-31 of OP3 MBZ
     if (!(e->MF[2] & MFkID) && e -> op [2]  & 0000000777660)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scd op3 18-28. 30-31 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scd op3 18-28. 30-31 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -3314,7 +3314,7 @@ void scdr (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -3324,22 +3324,22 @@ void scdr (void)
     if (IWB_IRODD & 0777600000000)
       {
         //sim_printf ("scdr %12"PRIo64"\n", IWB_IRODD);
-        doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "scdr 0-10 MBZ");
+        doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "scdr 0-10 MBZ");
       }
 
     // Bit 23 of OP1 MBZ
     if (!(e->MF[0] & MFkID) && e -> op [0]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scdr op1 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scdr op1 23 MBZ");
 
     // Bits 18-28. 30-31 of OP3 MBZ
     if (!(e->MF[2] & MFkID) && e -> op [2]  & 0000000777660)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scdr op3 18-28. 30-31 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scdr op3 18-28. 30-31 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -3517,7 +3517,7 @@ void scm (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -3525,21 +3525,21 @@ void scm (void)
     
     // Bits 9-10 MBZ
     if (IWB_IRODD & 0000600000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "scm 9-10 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "scm 9-10 MBZ");
 
     // Bit 23 of OP1 MBZ
     if (!(e->MF[0] & MFkID) && e -> op [0]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scm op1 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scm op1 23 MBZ");
 
     // Bits 18-28, 39-31 of OP3 MBZ
     if (!(e->MF[2] & MFkID) && e -> op [2]  & 0000000777660)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scm op3 18-28, 39-31 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scm op3 18-28, 39-31 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -3685,7 +3685,7 @@ void scmr (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -3693,25 +3693,25 @@ void scmr (void)
     
     // Bits 9-10 MBZ
     if (IWB_IRODD & 0000600000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "scmr 9-10 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "scmr 9-10 MBZ");
 
     // Bit 23 of OP1 MBZ
     if (!(e->MF[0] & MFkID) && e -> op [0]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scmr op1 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scmr op1 23 MBZ");
 
     // Bits 18 of OP3 MBZ
     //if (!(e->MF[2] & MFkID) && e -> op [2]  & 0000000400000)
-    //  doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scmr op3 18 MBZ");
+    //  doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scmr op3 18 MBZ");
 
     // Bits 18-28, 39-31 of OP3 MBZ
     if (!(e->MF[2] & MFkID) && e -> op [2]  & 0000000777660)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scmr op3 18-28, 39-31 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "scmr op3 18-28, 39-31 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -3888,7 +3888,7 @@ void tct (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -3896,25 +3896,25 @@ void tct (void)
     
     // Bits 0-17 MBZ
     if (IWB_IRODD & 0777777000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "tct 0-17 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "tct 0-17 MBZ");
 
     // Bit 23 of OP1 MBZ
     if (!(e->MF[0] & MFkID) && e -> op [0]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "tct op1 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "tct op1 23 MBZ");
 
     // Bits 18-28, 39-31 of OP2 MBZ
     if (!(e->MF[1] & MFkID) && e -> op [1]  & 0000000777660)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "tct op2 18-28, 39-31 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "tct op2 18-28, 39-31 MBZ");
 
     // Bits 18-28, 39-31 of OP3 MBZ
     if (!(e->MF[2] & MFkID) && e -> op [2]  & 0000000777660)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "tct op3 18-28, 39-31 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "tct op3 18-28, 39-31 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -4084,7 +4084,7 @@ void tctr (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -4092,25 +4092,25 @@ void tctr (void)
     
     // Bits 0-17 MBZ
     if (IWB_IRODD & 0777777000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "tctr 0-17 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "tctr 0-17 MBZ");
 
     // Bit 23 of OP1 MBZ
     if (!(e->MF[0] & MFkID) && e -> op [0]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "tctr op1 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "tctr op1 23 MBZ");
 
     // Bits 18-28, 39-31 of OP2 MBZ
     if (!(e->MF[1] & MFkID) && e -> op [1]  & 0000000777660)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "tctr op2 18-28, 39-31 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "tctr op2 18-28, 39-31 MBZ");
 
     // Bits 18-28, 39-31 of OP3 MBZ
     if (!(e->MF[2] & MFkID) && e -> op [2]  & 0000000777660)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "tctr op3 18-28, 39-31 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "tctr op3 18-28, 39-31 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -4323,7 +4323,7 @@ void mlr (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -4331,21 +4331,21 @@ void mlr (void)
     
     // Bit 10 MBZ
     if (IWB_IRODD & 0000200000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mlr 10 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mlr 10 MBZ");
 
     // Bit 23 of OP1 MBZ
     if (!(e->MF[0] & MFkID) && e -> op [0]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mlr op1 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mlr op1 23 MBZ");
 
     // Bit 23 of OP2 MBZ
     if (!(e->MF[1] & MFkID) && e -> op [1]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mlr op2 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mlr op2 23 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -4692,7 +4692,7 @@ void mlr (void)
       {
         SET_I_TRUNC;
         if (T && ! TST_I_OMASK)
-          doFault (FAULT_OFL, fst_zero, "mlr truncation fault");
+          doFault (cpup, FAULT_OFL, fst_zero, "mlr truncation fault");
       }
     else
       CLR_I_TRUNC;
@@ -4724,7 +4724,7 @@ void mrl (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -4732,21 +4732,21 @@ void mrl (void)
     
     // Bit 10 MBZ
     if (IWB_IRODD & 0000200000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mrl 10 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mrl 10 MBZ");
 
     // Bit 23 of OP1 MBZ
     if (!(e->MF[0] & MFkID) && e -> op [0]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mrl op1 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mrl op1 23 MBZ");
 
     // Bit 23 of OP2 MBZ
     if (!(e->MF[1] & MFkID) && e -> op [1]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mrl op2 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mrl op2 23 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -4995,7 +4995,7 @@ void mrl (void)
       {
         SET_I_TRUNC;
         if (T && ! TST_I_OMASK)
-          doFault (FAULT_OFL, fst_zero, "mrl truncation fault");
+          doFault (cpup, FAULT_OFL, fst_zero, "mrl truncation fault");
       }
     else
       CLR_I_TRUNC;
@@ -5085,7 +5085,7 @@ static void EISloadInputBufferNumeric (int k)
                     c &= 0xf;   // hack off all but lower 4 bits
 
                     if (c < 012 || c > 017)
-                      doFault (FAULT_IPR,
+                      doFault (cpup, FAULT_IPR,
                                fst_ill_dig,
                                "loadInputBufferNumeric(1): illegal char in "
                                "input");
@@ -5119,7 +5119,7 @@ static void EISloadInputBufferNumeric (int k)
                 {
                     c &= 0xf;   // hack off all but lower 4 bits
                     if (c > 011)
-                        doFault(FAULT_IPR, fst_ill_dig, "loadInputBufferNumeric(2): illegal char in input"); // TODO: generate ill proc fault
+                        doFault (cpup, FAULT_IPR, fst_ill_dig, "loadInputBufferNumeric(2): illegal char in input"); // TODO: generate ill proc fault
 
                     *p++ = c; // store 4-bit char in buffer
                 }
@@ -5132,7 +5132,7 @@ static void EISloadInputBufferNumeric (int k)
                 if (n == 0) // first had better be a sign ....
                 {
                     if (c < 012 || c > 017)
-                        doFault(FAULT_IPR, fst_ill_dig, "loadInputBufferNumeric(3): illegal char in input"); // TODO: generate ill proc fault
+                        doFault (cpup, FAULT_IPR, fst_ill_dig, "loadInputBufferNumeric(3): illegal char in input"); // TODO: generate ill proc fault
 
                     if (c == 015)   // '-'
                         e->sign = -1;
@@ -5141,7 +5141,7 @@ static void EISloadInputBufferNumeric (int k)
                 else
                 {
                     if (c > 011)
-                        doFault(FAULT_IPR, fst_ill_dig, "loadInputBufferNumeric(4): illegal char in input");
+                        doFault (cpup, FAULT_IPR, fst_ill_dig, "loadInputBufferNumeric(4): illegal char in input");
                     *p++ = c; // store 4-bit char in buffer
                 }
                 break;
@@ -5152,7 +5152,7 @@ static void EISloadInputBufferNumeric (int k)
                 if (n == N-1) // last had better be a sign ....
                 {
                     if (c < 012 || c > 017)
-                         doFault(FAULT_IPR, fst_ill_dig, "loadInputBufferNumeric(5): illegal char in input");
+                         doFault (cpup, FAULT_IPR, fst_ill_dig, "loadInputBufferNumeric(5): illegal char in input");
                     if (c == 015)   // '-'
                         e->sign = -1;
                     e->srcTally -= 1;   // 1 less source char
@@ -5160,7 +5160,7 @@ static void EISloadInputBufferNumeric (int k)
                 else
                 {
                     if (c > 011)
-                        doFault(FAULT_IPR, fst_ill_dig, "loadInputBufferNumeric(6): illegal char in input");
+                        doFault (cpup, FAULT_IPR, fst_ill_dig, "loadInputBufferNumeric(6): illegal char in input");
                     *p++ = c; // store 4-bit char in buffer
                 }
                 break;
@@ -6661,7 +6661,7 @@ static void mopExecutor (int kMop)
 #endif
 
     if (e -> _faults)
-      doFault (FAULT_IPR, fst_ill_proc, "mopExecutor");
+      doFault (cpup, FAULT_IPR, fst_ill_proc, "mopExecutor");
 }
 
 
@@ -6687,7 +6687,7 @@ void mve (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -6696,30 +6696,30 @@ void mve (void)
     // Bits 0, 1, 9, and 10 MBZ
     // According to RJ78, bit 9 is T, but is not mentioned in the text.
     if (IWB_IRODD & 0600600000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mve: 0, 1, 9, 10 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mve: 0, 1, 9, 10 MBZ");
 
     // Bit 23 of OP1 MBZ
     if (!(e->MF[0] & MFkID) && e -> op [0]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mve op1 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mve op1 23 MBZ");
 
 #if 0
     // Bits 21-23 of OP1 MBZ
     if (!(e->MF[1] & MFkID) && e -> op [1]  & 0000000070000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mve op2 21-23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mve op2 21-23 MBZ");
 #endif
     // only bit 23 according to RH03. this was fixed in DPS9000
     if (!(e->MF[1] & MFkID) && e -> op [1]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mve op2 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mve op2 23 MBZ");
 
     // Bit 23 of OP3 MBZ
     if (!(e->MF[2] & MFkID) && e -> op [2]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mve op3 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mve op3 23 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -6812,7 +6812,7 @@ void mvne (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -6820,37 +6820,37 @@ void mvne (void)
     
     // Bits 0, 1, 9, and 10 MBZ
     if (IWB_IRODD & 0600600000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mvne: 0, 1, 9, 10 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mvne: 0, 1, 9, 10 MBZ");
 
 
     // Bit 24-29 of OP1 MBZ
     // Multics has been observed to use 600162017511, cf RJ78
     //if (!(e->MF[0] & MFkID) && e -> op [0]  & 0000000007700)
-      //doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvne op1 24-29 MBZ");
+      //doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvne op1 24-29 MBZ");
 
 #if 0
     // Bits 21-29 of OP1 MBZ
     if (!(e->MF[1] & MFkID) && e -> op [1]  & 0000000077700)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvne op2 21-29 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvne op2 21-29 MBZ");
 #endif
     // only bits 21-23 according to RJ78, maybe even less on DPS8
     if (!(e->MF[1] & MFkID) && e -> op [1]  & 0000000070000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvne op2 21-23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvne op2 21-23 MBZ");
 
 #if 0
     // Bits 23-29 of OP3 MBZ
     if (!(e->MF[2] & MFkID) && e -> op [2]  & 0000000017700)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvne op3 23-29 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvne op3 23-29 MBZ");
 #endif
     // only bit 23 according to RJ78
     if (!(e->MF[2] & MFkID) && e -> op [2]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvne op3 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvne op3 23 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -6891,18 +6891,18 @@ void mvne (void)
     }
 
     if (n1 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "mvne adjusted n1<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "mvne adjusted n1<1");
 
     // Putting this check in pAOD breaks Multics boot
     // From DH03 it seems that DPS8 does not check this explicitly, but L2 exhaust occurs which raises IPR anyway
     // So we may as well keep it here.
     if (e->N[1] == 0)
-      doFault (FAULT_IPR, fst_ill_proc, "mvne N2 0");
+      doFault (cpup, FAULT_IPR, fst_ill_proc, "mvne N2 0");
 
     // this is a flaw in DPS8/70 which was corrected in DPS88 and later
     // ISOLTS-841 07h, RH03 p.7-295
     if (e->N[2] == 0)
-      doFault (FAULT_IPR, fst_ill_proc, "mvne N3 0");
+      doFault (cpup, FAULT_IPR, fst_ill_proc, "mvne N3 0");
 
 //if ((e -> op [0]  & 0000000007700) ||
 //    (e -> op [1]  & 0000000077700) ||
@@ -7047,7 +7047,7 @@ void mvt (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -7060,37 +7060,37 @@ void mvt (void)
     if (IWB_IRODD & 0000200000000)
       {
         //sim_printf ("mvt %012"PRIo64"\n", IWB_IRODD);
-        doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mvt 10 MBZ");
+        doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mvt 10 MBZ");
       }
 #else
     // Bits 0,1,9,10 MBZ 
     if (IWB_IRODD & 0600600000000)
       {
         //sim_printf ("mvt %012"PRIo64"\n", IWB_IRODD);
-        doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mvt 0,1,9,10 MBZ");
+        doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mvt 0,1,9,10 MBZ");
       }
 #endif
 
     // Bit 23 of OP1 MBZ
     if (!(e->MF[0] & MFkID) && e -> op [0]  & 0000000010000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvt op1 23 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvt op1 23 MBZ");
 
 // This breaks eis_tester mvt 110
 #if 0
     // Bits 18 of OP2 MBZ
     if (!(e->MF[1] & MFkID) && e -> op [1]  & 0000000400000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvt op2 18 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvt op2 18 MBZ");
 #endif
 
     // Bits 18-28 of OP3 MBZ
     if (!(e->MF[2] & MFkID) && e -> op [2]  & 0000000777600)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvt op3 18-28 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "mvt op3 18-28 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -7308,7 +7308,7 @@ void mvt (void)
       {
         SET_I_TRUNC;
         if (T && ! TST_I_OMASK)
-          doFault(FAULT_OFL, fst_zero, "mvt truncation fault");
+          doFault (cpup, FAULT_OFL, fst_zero, "mvt truncation fault");
       }
     else
       CLR_I_TRUNC;
@@ -7343,7 +7343,7 @@ void cmpn (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -7351,13 +7351,13 @@ void cmpn (void)
     
     // Bits 0-10 MBZ
     if (IWB_IRODD & 0777600000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "cmpn 0-10 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "cmpn 0-10 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -7401,7 +7401,7 @@ void cmpn (void)
     }
 
     if (n1 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "cmpn adjusted n1<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "cmpn adjusted n1<1");
 
     switch(e->S2)
     {
@@ -7427,7 +7427,7 @@ void cmpn (void)
     }
 
     if (n2 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "cmpn adjusted n2<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "cmpn adjusted n2<1");
 
 
     decContext set;
@@ -7648,7 +7648,7 @@ void mvn (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -7656,7 +7656,7 @@ void mvn (void)
     
     // Bits 2-8 MBZ
     if (IWB_IRODD & 0377000000000)
-     doFault (FAULT_IPR,
+     doFault (cpup, FAULT_IPR,
               (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault},
               "mvn 2-8 MBZ");
 
@@ -7664,7 +7664,7 @@ void mvn (void)
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -7736,7 +7736,7 @@ void mvn (void)
     // digit. 
 
     if (n1 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "mvn adjusted n1<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "mvn adjusted n1<1");
 
     switch(e->S2)
     {
@@ -7761,7 +7761,7 @@ void mvn (void)
     sim_debug (DBG_CAC, & cpu_dev, "n2 %d\n", n2);
 
     if (n2 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "mvn adjusted n2<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "mvn adjusted n2<1");
 
     decContext set;
     decContextDefaultDPS8(&set);
@@ -7938,14 +7938,14 @@ sim_debug (DBG_CAC, & cpu_dev, "Ovr %o\n", Ovr);
     cleanupOperandDescriptor (2);
     
     if (TST_I_TRUNC && T && tstOVFfault (cpup))
-        doFault (FAULT_OFL, fst_zero, "mvn truncation(overflow) fault");
+        doFault (cpup, FAULT_OFL, fst_zero, "mvn truncation(overflow) fault");
     if (EOvr && tstOVFfault (cpup))
-        doFault (FAULT_OFL, fst_zero, "mvn over/underflow fault");
+        doFault (cpup, FAULT_OFL, fst_zero, "mvn over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
         if (tstOVFfault (cpup))
-          doFault (FAULT_OFL, fst_zero, "mvn overflow fault");
+          doFault (cpup, FAULT_OFL, fst_zero, "mvn overflow fault");
     }
 }
 
@@ -8023,7 +8023,7 @@ void csl (bool isSZTL)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -8031,13 +8031,13 @@ void csl (bool isSZTL)
     
     // Bits 1-4 and 10 MBZ
     if (IWB_IRODD & 0360200000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "csl 1-4,10 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "csl 1-4,10 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -8191,7 +8191,7 @@ void csl (bool isSZTL)
         SET_I_TRUNC;
         if (T && tstOVFfault (cpup))
         {
-            doFault(FAULT_OFL, fst_zero, "csl truncation fault");
+            doFault (cpup, FAULT_OFL, fst_zero, "csl truncation fault");
         }
     }
     else
@@ -8335,7 +8335,7 @@ void csr (bool isSZTR)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -8343,13 +8343,13 @@ void csr (bool isSZTR)
     
     // Bits 1-4 and 10 MBZ
     if (IWB_IRODD & 0360200000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "csr 1-4,10 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "csr 1-4,10 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -8514,7 +8514,7 @@ void csr (bool isSZTR)
         SET_I_TRUNC;
         if (T && tstOVFfault (cpup))
         {
-            doFault(FAULT_OFL, fst_zero, "csr truncation fault");
+            doFault (cpup, FAULT_OFL, fst_zero, "csr truncation fault");
         }
     }
     else
@@ -8605,7 +8605,7 @@ void cmpb (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -8613,13 +8613,13 @@ void cmpb (void)
     
     // Bits 1-8 and 10 MBZ
     if (IWB_IRODD & 0377200000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "cmpb 1-8,10 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "cmpb 1-8,10 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -9246,7 +9246,7 @@ void btd (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -9256,25 +9256,25 @@ void btd (void)
     if (IWB_IRODD & 0377600000000)
       {
         //sim_printf ("sb2d %012"PRIo64"\n", IWB_IRODD);
-        doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "btd 0-8 MBZ");
+        doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "btd 0-8 MBZ");
       }
 
     // Bits 21-29 of OP1 MBZ
     if (!(e->MF[0] & MFkID) && e -> op [0]  & 0000000077700)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "btd op1 21-29 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "btd op1 21-29 MBZ");
 
     // Bits 24-29 of OP2 MBZ
     if (!(e->MF[1] & MFkID) && e -> op [1]  & 0000000007700)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "btd op2 24-29 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "btd op2 24-29 MBZ");
 
     if (e->S[1] == 0)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "btd op2 S=0");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "btd op2 S=0");
 
 #ifdef DPS8M
     // DPS8 raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -9283,7 +9283,7 @@ void btd (void)
     e->P = getbits36_1 (cpu.cu.IWB, 0) != 0;  // 4-bit data sign character control
 
     if (e->N1 == 0 || e->N1 > 8)
-        doFault(FAULT_IPR, fst_ill_proc, "btd(1): N1 == 0 || N1 > 8"); 
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "btd(1): N1 == 0 || N1 > 8"); 
 
     uint dstTN = e->TN2;    // type of chars in dst
     uint dstCN = e->CN2;    // starting at char pos CN
@@ -9307,7 +9307,7 @@ void btd (void)
       n2);
 
     if (n2 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "btd adjusted n2<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "btd adjusted n2<1");
 
 
     decContext set;
@@ -9443,7 +9443,7 @@ void btd (void)
     {
         SET_I_OFLOW;
         if (tstOVFfault (cpup))
-          doFault(FAULT_OFL, fst_zero, "btd overflow fault");
+          doFault (cpup, FAULT_OFL, fst_zero, "btd overflow fault");
     }
 }
 
@@ -9517,7 +9517,7 @@ if (eisaddr_idx < 0 || eisaddr_idx > 2) { sim_warn ("IDX1"); return }
                     break;
                 default:
                     // not a leading sign
-                    doFault(FAULT_IPR, fst_ill_proc, "loadDec(): no leading sign (1)");
+                    doFault (cpup, FAULT_IPR, fst_ill_proc, "loadDec(): no leading sign (1)");
             }
             pos += 1;           // onto next posotion
             continue;
@@ -9538,7 +9538,7 @@ if (eisaddr_idx < 0 || eisaddr_idx > 2) { sim_warn ("IDX1"); return }
                     break;
                 default:
                     // not a leading sign
-                    doFault(FAULT_IPR, fst_ill_proc, "loadDec(): no leading sign (2)");
+                    doFault (cpup, FAULT_IPR, fst_ill_proc, "loadDec(): no leading sign (2)");
             }
             pos += 1;           // onto next posotion
             continue;
@@ -9560,7 +9560,7 @@ if (eisaddr_idx < 0 || eisaddr_idx > 2) { sim_warn ("IDX1"); return }
                     break;
                 default:
                     // not a trailing sign
-                    doFault(FAULT_IPR, fst_ill_proc, "loadDec(): no trailing sign (1)");
+                    doFault (cpup, FAULT_IPR, fst_ill_proc, "loadDec(): no trailing sign (1)");
             }
             break;
         }
@@ -9580,7 +9580,7 @@ if (eisaddr_idx < 0 || eisaddr_idx > 2) { sim_warn ("IDX1"); return }
                     break;
                 default:
                     // not a trailing sign
-                    doFault(FAULT_IPR, fst_ill_proc, "loadDec(): no trailing sign (2)");
+                    doFault (cpup, FAULT_IPR, fst_ill_proc, "loadDec(): no trailing sign (2)");
             }
             break;
         }
@@ -9673,7 +9673,7 @@ void dtb (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -9683,33 +9683,33 @@ void dtb (void)
     uint mbz = (uint) getbits36 (IWB_IRODD, 0, 11);
     if (mbz)
       {
-        doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "dtb(): 0-10 MBZ");
+        doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "dtb(): 0-10 MBZ");
       }
 
     // Bits 24-29 of OP1 MBZ
     if (!(e->MF[0] & MFkID) && e -> op [0]  & 0000000007700)
       {
-        doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "dtb op1 24-29 MBZ");
+        doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "dtb op1 24-29 MBZ");
       }
 
     // Bits 21-29 of OP2 MBZ
     if (!(e->MF[1] & MFkID) && e -> op [1]  & 0000000077700)
       {
-        doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "dtb op2 21-29 MBZ");
+        doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "dtb op2 21-29 MBZ");
        }
 
     // Attempted conversion of a floating-point number (S1 = 0) or attempted 
     // use of a scaling factor (SF1 ≠ 0) causes an illegal procedure fault.
     if (e->S1 == 0 || e->SF1 != 0)
     {
-        doFault(FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "dtb():  S1=0 or SF1!=0");
+        doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC|mod_fault}, "dtb():  S1=0 or SF1!=0");
     }
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -9718,7 +9718,7 @@ void dtb (void)
     // If N2 = 0 or N2 > 8 an illegal procedure fault occurs.
     if (e->N2 == 0 || e->N2 > 8)
     {
-        doFault(FAULT_IPR, fst_ill_proc, "dtb():  N2 = 0 or N2 > 8 etc.");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "dtb():  N2 = 0 or N2 > 8 etc.");
     }
 
 
@@ -9750,7 +9750,7 @@ void dtb (void)
     // specified sign and/or exponent, plus at least one digit. 
 
     if (n1 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "dtb adjusted n1<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "dtb adjusted n1<1");
 
 
     EISloadInputBufferNumeric (1);   // according to MF1
@@ -9834,7 +9834,7 @@ sim_printf("dtb: N1 %d N2 %d nin %d CN1 %d CN2 %d msk %012"PRIo64" %012"PRIo64"\
     {
         SET_I_OFLOW;
         if (tstOVFfault (cpup))
-          doFault(FAULT_OFL, fst_zero, "dtb overflow fault");
+          doFault (cpup, FAULT_OFL, fst_zero, "dtb overflow fault");
     }
 }
 
@@ -9868,7 +9868,7 @@ void ad2d (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -9876,13 +9876,13 @@ void ad2d (void)
     
     // Bits 1-8 MBZ
     if (IWB_IRODD & 0377000000000)
-      doFault (FAULT_IPR, fst_ill_op, "ad2d 1-8 MBZ");
+      doFault (cpup, FAULT_IPR, fst_ill_op, "ad2d 1-8 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -9938,7 +9938,7 @@ void ad2d (void)
     }
 
     if (n1 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "ad2d adjusted n1<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "ad2d adjusted n1<1");
 
     switch(e->S2)
     {
@@ -9964,7 +9964,7 @@ void ad2d (void)
     }
 
     if (n2 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "ad2d adjusted n2<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "ad2d adjusted n2<1");
     
 
     decContext set;
@@ -10144,14 +10144,14 @@ void ad2d (void)
     cleanupOperandDescriptor (3);
 
     if (TST_I_TRUNC && T && tstOVFfault (cpup))
-      doFault(FAULT_OFL, fst_zero, "ad2d truncation(overflow) fault");
+      doFault (cpup, FAULT_OFL, fst_zero, "ad2d truncation(overflow) fault");
     if (EOvr && tstOVFfault (cpup))
-        doFault(FAULT_OFL, fst_zero, "ad2d over/underflow fault");
+        doFault (cpup, FAULT_OFL, fst_zero, "ad2d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
         if (tstOVFfault (cpup))
-          doFault(FAULT_OFL, fst_zero, "ad2d overflow fault");
+          doFault (cpup, FAULT_OFL, fst_zero, "ad2d overflow fault");
     }
 }
 
@@ -10219,7 +10219,7 @@ void ad3d (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -10227,13 +10227,13 @@ void ad3d (void)
     
     // Bit 1 MBZ
     if (IWB_IRODD & 0200000000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "ad3d(): 1 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "ad3d(): 1 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -10288,7 +10288,7 @@ void ad3d (void)
     }
 
     if (n1 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "ad3d adjusted n1<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "ad3d adjusted n1<1");
 
     switch(e->S2)
     {
@@ -10314,7 +10314,7 @@ void ad3d (void)
     }
 
     if (n2 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "ad3d adjusted n2<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "ad3d adjusted n2<1");
     
     switch(e->S3)
     {
@@ -10337,7 +10337,7 @@ void ad3d (void)
     }
 
     if (n3 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "ad3d adjusted n3<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "ad3d adjusted n3<1");
     
 
     decContext set;
@@ -10524,14 +10524,14 @@ void ad3d (void)
     cleanupOperandDescriptor (3);
 
     if (TST_I_TRUNC && T && tstOVFfault (cpup))
-      doFault(FAULT_OFL, fst_zero, "ad3d truncation(overflow) fault");
+      doFault (cpup, FAULT_OFL, fst_zero, "ad3d truncation(overflow) fault");
     if (EOvr && tstOVFfault (cpup))
-        doFault(FAULT_OFL, fst_zero, "ad3d over/underflow fault");
+        doFault (cpup, FAULT_OFL, fst_zero, "ad3d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
         if (tstOVFfault (cpup))
-          doFault(FAULT_OFL, fst_zero, "ad3d overflow fault");
+          doFault (cpup, FAULT_OFL, fst_zero, "ad3d overflow fault");
     }
 }
 
@@ -10558,7 +10558,7 @@ void sb2d (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -10568,14 +10568,14 @@ void sb2d (void)
     if (IWB_IRODD & 0377000000000)
       {
         //sim_printf ("sb2d %012"PRIo64"\n", IWB_IRODD);
-        doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "sb2d 0-8 MBZ");
+        doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "sb2d 0-8 MBZ");
       }
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -10632,7 +10632,7 @@ void sb2d (void)
     }
 
     if (n1 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "sb2d adjusted n1<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "sb2d adjusted n1<1");
 
     switch(e->S2)
     {
@@ -10658,7 +10658,7 @@ void sb2d (void)
     }
 
     if (n2 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "sb2d adjusted n2<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "sb2d adjusted n2<1");
 
     
     decContext set;
@@ -10838,14 +10838,14 @@ void sb2d (void)
     cleanupOperandDescriptor (3);
 
     if (TST_I_TRUNC && T && tstOVFfault (cpup))
-      doFault(FAULT_OFL, fst_zero, "sb2d truncation(overflow) fault");
+      doFault (cpup, FAULT_OFL, fst_zero, "sb2d truncation(overflow) fault");
     if (EOvr && tstOVFfault (cpup))
-        doFault(FAULT_OFL, fst_zero, "sb2d over/underflow fault");
+        doFault (cpup, FAULT_OFL, fst_zero, "sb2d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
         if (tstOVFfault (cpup))
-          doFault(FAULT_OFL, fst_zero, "sb2d overflow fault");
+          doFault (cpup, FAULT_OFL, fst_zero, "sb2d overflow fault");
     }
 }
 
@@ -10873,7 +10873,7 @@ void sb3d (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -10881,13 +10881,13 @@ void sb3d (void)
     
     // Bit 1 MBZ
     if (IWB_IRODD & 0200000000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "sb3d(): 1 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "sb3d(): 1 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -10941,7 +10941,7 @@ void sb3d (void)
     }
 
     if (n1 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "sb3d adjusted n1<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "sb3d adjusted n1<1");
 
     switch(e->S2)
     {
@@ -10967,7 +10967,7 @@ void sb3d (void)
     }
 
     if (n2 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "sb3d adjusted n2<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "sb3d adjusted n2<1");
     
     switch(e->S3)
     {
@@ -10990,7 +10990,7 @@ void sb3d (void)
     }
 
     if (n3 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "sb3d adjusted n3<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "sb3d adjusted n3<1");
     
 
     decContext set;
@@ -11169,14 +11169,14 @@ void sb3d (void)
     cleanupOperandDescriptor (3);
 
     if (TST_I_TRUNC && T && tstOVFfault (cpup))
-      doFault(FAULT_OFL, fst_zero, "sb3d truncation(overflow) fault");
+      doFault (cpup, FAULT_OFL, fst_zero, "sb3d truncation(overflow) fault");
     if (EOvr && tstOVFfault (cpup))
-        doFault(FAULT_OFL, fst_zero, "sb3d over/underflow fault");
+        doFault (cpup, FAULT_OFL, fst_zero, "sb3d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
         if (tstOVFfault (cpup))
-          doFault(FAULT_OFL, fst_zero, "sb3d overflow fault");
+          doFault (cpup, FAULT_OFL, fst_zero, "sb3d overflow fault");
     }
 }
 
@@ -11203,7 +11203,7 @@ void mp2d (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -11211,13 +11211,13 @@ void mp2d (void)
     
     // Bits 1-8 MBZ
     if (IWB_IRODD & 0377000000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mp2d 1-8 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mp2d 1-8 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -11273,7 +11273,7 @@ void mp2d (void)
     }
 
     if (n1 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "mp2d adjusted n1<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "mp2d adjusted n1<1");
 
     switch(e->S2)
     {
@@ -11299,7 +11299,7 @@ void mp2d (void)
     }
 
     if (n2 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "mp2d adjusted n2<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "mp2d adjusted n2<1");
     
 
     decContext set;
@@ -11439,14 +11439,14 @@ void mp2d (void)
     cleanupOperandDescriptor (3);
 
     if (TST_I_TRUNC && T && tstOVFfault (cpup))
-      doFault(FAULT_OFL, fst_zero, "mp2d truncation(overflow) fault");
+      doFault (cpup, FAULT_OFL, fst_zero, "mp2d truncation(overflow) fault");
     if (EOvr && tstOVFfault (cpup))
-        doFault(FAULT_OFL, fst_zero, "mp2d over/underflow fault");
+        doFault (cpup, FAULT_OFL, fst_zero, "mp2d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
         if (tstOVFfault (cpup))
-          doFault(FAULT_OFL, fst_zero, "mp2d overflow fault");
+          doFault (cpup, FAULT_OFL, fst_zero, "mp2d overflow fault");
     }
 }
 
@@ -11474,7 +11474,7 @@ void mp3d (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -11482,13 +11482,13 @@ void mp3d (void)
     
     // Bit 1 MBZ
     if (IWB_IRODD & 0200000000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mp3d(): 1 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "mp3d(): 1 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -11542,7 +11542,7 @@ void mp3d (void)
     }
 
     if (n1 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "mp3d adjusted n1<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "mp3d adjusted n1<1");
 
     switch(e->S2)
     {
@@ -11568,7 +11568,7 @@ void mp3d (void)
     }
 
     if (n2 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "mp3d adjusted n2<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "mp3d adjusted n2<1");
     
     switch(e->S3)
     {
@@ -11591,7 +11591,7 @@ void mp3d (void)
     }
 
     if (n3 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "mp3d adjusted n3<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "mp3d adjusted n3<1");
 
 
     decContext set;
@@ -11745,14 +11745,14 @@ void mp3d (void)
     cleanupOperandDescriptor (3);
 
     if (TST_I_TRUNC && T && tstOVFfault (cpup))
-      doFault(FAULT_OFL, fst_zero, "mp3d truncation(overflow) fault");
+      doFault (cpup, FAULT_OFL, fst_zero, "mp3d truncation(overflow) fault");
     if (EOvr && tstOVFfault (cpup))
-        doFault(FAULT_OFL, fst_zero, "mp3d over/underflow fault");
+        doFault (cpup, FAULT_OFL, fst_zero, "mp3d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
         if (tstOVFfault (cpup))
-          doFault(FAULT_OFL, fst_zero, "mp3d overflow fault");
+          doFault (cpup, FAULT_OFL, fst_zero, "mp3d overflow fault");
     }
 }
 
@@ -12541,7 +12541,7 @@ void dv2d (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -12550,13 +12550,13 @@ void dv2d (void)
     // Bits 1-8 MBZ
     // ISOLTS test 840 and RJ78 says bit 9 (T) MBZ as well
     if (IWB_IRODD & 0377400000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "dv2d 1-9 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "dv2d 1-9 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -12612,7 +12612,7 @@ void dv2d (void)
     }
 
     if (n1 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "dv2d adjusted n1<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "dv2d adjusted n1<1");
     
     switch(e->S2)
     {
@@ -12638,7 +12638,7 @@ void dv2d (void)
     }
 
     if (n2 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "dv2d adjusted n2<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "dv2d adjusted n2<1");
 
 
     decContext set;
@@ -12659,7 +12659,7 @@ void dv2d (void)
     // check for divide by 0!
     if (decNumberIsZero(op1))
     {
-        doFault(FAULT_DIV, fst_zero, "dv2d division by 0");
+        doFault (cpup, FAULT_DIV, fst_zero, "dv2d division by 0");
     }
 
     word9   inBufferop1 [64];
@@ -12700,7 +12700,7 @@ void dv2d (void)
 sim_debug (DBG_TRACEEXT, & cpu_dev, "dv2d S1 %d S2 %d N1 %d N2 %d clz1 %d clz2 %d E1 %d E2 %d SF2 %d NQ %d\n",e->S1,e->S2,e->N1,e->N2,clz1,clz2,op1->exponent,op2->exponent,e->SF2,NQ);
     }
     if (NQ > 63)
-        doFault(FAULT_DIV, fst_zero, "dv2d NQ>63");
+        doFault (cpup, FAULT_DIV, fst_zero, "dv2d NQ>63");
     // Note: NQ is currently unused apart from this FAULT_DIV check. decNumber produces more digits than required, but they are then rounded/truncated
 
     // Yes, they're switched. op1=divisor
@@ -12897,14 +12897,14 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "dv2d S1 %d S2 %d N1 %d N2 %d clz1 %d clz2 %
     cleanupOperandDescriptor (3);
 
     //if (TST_I_TRUNC && T && tstOVFfault (cpup))
-    //  doFault(FAULT_OFL, fst_zero, "dv2d truncation(overflow) fault");
+    //  doFault (cpup, FAULT_OFL, fst_zero, "dv2d truncation(overflow) fault");
     if (EOvr && tstOVFfault (cpup))
-        doFault(FAULT_OFL, fst_zero, "dv2d over/underflow fault");
+        doFault (cpup, FAULT_OFL, fst_zero, "dv2d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
         if (tstOVFfault (cpup))
-          doFault(FAULT_OFL, fst_zero, "dv2d overflow fault");
+          doFault (cpup, FAULT_OFL, fst_zero, "dv2d overflow fault");
     }
 }
 
@@ -12933,7 +12933,7 @@ void dv3d (void)
     // L68 raises it immediately
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -12942,13 +12942,13 @@ void dv3d (void)
     // Bit 1 MBZ
     // ISOLTS test 840 and RJ78 says bit 9 (T) MBZ
     if (IWB_IRODD & 0200400000000)
-      doFault (FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "dv3d(): 1,9 MBZ");
+      doFault (cpup, FAULT_IPR, (_fault_subtype) {.fault_ipr_subtype=FR_ILL_OP|mod_fault}, "dv3d(): 1,9 MBZ");
 
 #ifdef DPS8M
     // DPS8M raises it delayed
     if (mod_fault)
       {
-        doFault (FAULT_IPR,
+        doFault (cpup, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=mod_fault},
                  "Illegal modifier");
       }
@@ -13002,7 +13002,7 @@ void dv3d (void)
     }
 
     if (n1 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "dv3d adjusted n1<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "dv3d adjusted n1<1");
 
     switch(e->S2)
     {
@@ -13028,7 +13028,7 @@ void dv3d (void)
     }
 
     if (n2 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "dv3d adjusted n2<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "dv3d adjusted n2<1");
     
     switch(e->S3)
     {
@@ -13050,7 +13050,7 @@ void dv3d (void)
             break;  // no sign wysiwyg
     }
     if (n3 < 1)
-        doFault (FAULT_IPR, fst_ill_proc, "dv3d adjusted n3<1");
+        doFault (cpup, FAULT_IPR, fst_ill_proc, "dv3d adjusted n3<1");
 
 
     decContext set;
@@ -13072,7 +13072,7 @@ void dv3d (void)
     // check for divide by 0!
     if (decNumberIsZero(op1))
     {
-        doFault(FAULT_DIV, fst_zero, "dv3d division by 0");
+        doFault (cpup, FAULT_DIV, fst_zero, "dv3d division by 0");
     }
 
     word9   inBufferop1 [64];
@@ -13130,7 +13130,7 @@ void dv3d (void)
 sim_debug (DBG_TRACEEXT, & cpu_dev, "dv3d S1 %d S2 %d N1 %d N2 %d clz1 %d clz2 %d E1 %d E2 %d SF3 %d NQ %d\n",e->S1,e->S2,e->N1,e->N2,clz1,clz2,op1->exponent,op2->exponent,e->SF3,NQ);
     }
     if (NQ > 63)
-        doFault(FAULT_DIV, fst_zero, "dv3d NQ>63");
+        doFault (cpup, FAULT_DIV, fst_zero, "dv3d NQ>63");
     // Note: NQ is currently unused apart from this FAULT_DIV check. decNumber produces more digits than required, but they are then rounded/truncated
 
     // Yes, they're switched. op1=divisor
@@ -13329,13 +13329,13 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "dv3d S1 %d S2 %d N1 %d N2 %d clz1 %d clz2 %
     cleanupOperandDescriptor (3);
     
     //if (TST_I_TRUNC && T && tstOVFfault (cpup))
-    //  doFault(FAULT_OFL, fst_zero, "dv3d truncation(overflow) fault");
+    //  doFault (cpup, FAULT_OFL, fst_zero, "dv3d truncation(overflow) fault");
     if (EOvr && tstOVFfault (cpup))
-        doFault(FAULT_OFL, fst_zero, "dv3d over/underflow fault");
+        doFault (cpup, FAULT_OFL, fst_zero, "dv3d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
         if (tstOVFfault (cpup))
-          doFault(FAULT_OFL, fst_zero, "dv3d overflow fault");
+          doFault (cpup, FAULT_OFL, fst_zero, "dv3d overflow fault");
     }
 }

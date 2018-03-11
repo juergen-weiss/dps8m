@@ -1536,7 +1536,7 @@ static void do_LUF_fault (cpu_state_t *cpu_p)
 // see how to fix this one.
 
 #endif
-    doFault (FAULT_LUF, fst_zero, "instruction cycle lockup");
+    doFault (cpu_p, FAULT_LUF, fst_zero, "instruction cycle lockup");
   }
 
 #if !defined(THREADZ) && !defined(LOCKLESS)
@@ -1924,7 +1924,7 @@ setCPU:;
                         CPT (cpt1U, 14); // sampling interrupts
                         cpu_p->interrupt_flag = sample_interrupts (cpu_p);
                         cpu_p->g7_flag =
-                          noCheckTR ? bG7PendingNoTRO () : bG7Pending ();
+                          noCheckTR ? bG7PendingNoTRO (cpu_p) : bG7Pending (cpu_p);
                       }
                     cpu_p->wasInhibited = false;
                   }
@@ -1973,7 +1973,7 @@ setCPU:;
 // weight, so this should be okay.
 
                 if (cpu_p->interrupt_flag)
-                  cpu_p->g7_flag = noCheckTR ? bG7PendingNoTRO () : bG7Pending ();
+                  cpu_p->g7_flag = noCheckTR ? bG7PendingNoTRO (cpu_p) : bG7Pending (cpu_p);
 
                 if (cpu_p->g7_flag)
                   {
@@ -1981,7 +1981,7 @@ setCPU:;
                       cpu_p->interrupt_flag = false;
                       sim_debug (DBG_CYCLE, & cpu_dev,
                                  "call doG7Fault (%d)\n", !noCheckTR);
-                      doG7Fault (!noCheckTR);
+                      doG7Fault (cpu_p, !noCheckTR);
                   }
                 if (cpu_p->interrupt_flag)
                   {
@@ -2056,7 +2056,7 @@ setCPU:;
 //  TR = 1024 << LUF
                    cpu_p->shadowTR = (word27) cpu_p->TR0 - (1024u << (is_priv_mode () ? 4 : cpu_p->CMR.luf));
 #endif
-                    doFault (FAULT_LUF, fst_zero, "instruction cycle lockup");
+                    doFault (cpu_p, FAULT_LUF, fst_zero, "instruction cycle lockup");
                   }
 #endif
                 // If we have done the even of an XED, do the odd
@@ -2106,7 +2106,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                   }
 
                 CPT (cpt1U, 21); // go to exec cycle
-                advanceG7Faults ();
+                advanceG7Faults (cpu_p);
                 set_cpu_cycle (cpu_p, EXEC_cycle);
               }
               break;
@@ -2157,7 +2157,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                     if (cpu_p->cycle != EXEC_cycle) // fault or interrupt
                       {
 
-                        clearFaultCycle ();
+                        clearFaultCycle (cpu_p);
 
 // BAR mode:  [NBAR] is set ON (taking the processor
 // out of BAR mode) by the execution of any transfer instruction
@@ -2368,7 +2368,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                     cpu_p->wasXfer = false;
                     CPT (cpt1U, 12); // cu restored
                     set_cpu_cycle (cpu_p, FETCH_cycle);
-                    clearFaultCycle ();
+                    clearFaultCycle (cpu_p);
                     // cu_safe_restore should have restored CU.IWB, so
                     // we can determine the instruction length.
                     // decode_instruction() restores ci->info->ndes
@@ -2750,12 +2750,12 @@ static void nem_check (word24 addr, char * context)
     word24 offset;
     if (lookup_cpu_mem_map (addr, & offset) < 0)
       {
-        doFault (FAULT_STR, fst_str_nea,  context);
+        doFault (cpu_p, FAULT_STR, fst_str_nea,  context);
       }
 #else
     if (lookup_cpu_mem_map (addr) < 0)
       {
-        doFault (FAULT_STR, fst_str_nea,  context);
+        doFault (cpu_p, FAULT_STR, fst_str_nea,  context);
       }
 #endif
   }
@@ -2769,7 +2769,7 @@ static uint get_scu_unit_idx (word24 addr, word24 * offset)
     if (cpu_port_num < 0) // Can't happen, we passed nem_check above
       { 
         sim_warn ("cpu_port_num < 0");
-        doFault (FAULT_STR, fst_str_nea,  __func__);
+        doFault (cpu_p, FAULT_STR, fst_str_nea,  __func__);
       }
     return cables->cpu_to_scu [current_running_cpu_idx][cpu_port_num].scu_unit_idx;
   }
@@ -2787,7 +2787,7 @@ int32 core_read (cpu_state_t *cpu_p, word24 addr, word36 *data, const char * ctx
         int os = cpu_p->scbank_pg_os [pgnum];
         if (os < 0)
           {
-            doFault (FAULT_STR, fst_str_nea,  __func__);
+            doFault (cpu_p, FAULT_STR, fst_str_nea,  __func__);
           }
         addr = (uint) os + addr % SCBANK;
       }
@@ -2875,7 +2875,7 @@ int32 core_read_lock (cpu_state_t *cpu_p, word24 addr, word36 *data, const char 
         int os = cpu_p->scbank_pg_os [pgnum];
         if (os < 0)
           {
-            doFault (FAULT_STR, fst_str_nea,  __func__);
+            doFault (cpu_p, FAULT_STR, fst_str_nea,  __func__);
           }
         addr = (uint) os + addr % SCBANK;
       }
@@ -2908,7 +2908,7 @@ int core_write (cpu_state_t *cpu_p, word24 addr, word36 data, const char * ctx)
         int os = cpu_p->scbank_pg_os [pgnum];
         if (os < 0)
           {
-            doFault (FAULT_STR, fst_str_nea,  __func__);
+            doFault (cpu_p, FAULT_STR, fst_str_nea,  __func__);
           }
         addr = (uint) os + addr % SCBANK;
       }
@@ -2981,7 +2981,7 @@ int core_write_unlock (cpu_state_t *cpu_p, word24 addr, word36 data, const char 
         int os = cpu_p->scbank_pg_os [pgnum];
         if (os < 0)
           {
-            doFault (FAULT_STR, fst_str_nea,  __func__);
+            doFault (cpu_p, FAULT_STR, fst_str_nea,  __func__);
           }
         addr = (uint) os + addr % SCBANK;
       }
@@ -3056,7 +3056,7 @@ int core_write_zone (cpu_state_t *cpu_p, word24 addr, word36 data, const char * 
         int os = cpu_p->scbank_pg_os [pgnum];
         if (os < 0)
           {
-            doFault (FAULT_STR, fst_str_nea,  __func__);
+            doFault (cpu_p, FAULT_STR, fst_str_nea,  __func__);
           }
         addr = (uint) os + addr % SCBANK;
       }
@@ -3109,7 +3109,7 @@ int core_read2 (cpu_state_t *cpu_p, word24 addr, word36 *even, word36 *odd, cons
         int os = cpu_p->scbank_pg_os [pgnum];
         if (os < 0)
           {
-            doFault (FAULT_STR, fst_str_nea,  __func__);
+            doFault (cpu_p, FAULT_STR, fst_str_nea,  __func__);
           }
         addr = (uint) os + addr % SCBANK;
       }
@@ -3261,7 +3261,7 @@ int core_write2 (cpu_state_t *cpu_p, word24 addr, word36 even, word36 odd, const
         int os = cpu_p->scbank_pg_os [pgnum];
         if (os < 0)
           {
-            doFault (FAULT_STR, fst_str_nea,  __func__);
+            doFault (cpu_p, FAULT_STR, fst_str_nea,  __func__);
           }
         addr = (word24)os + addr % SCBANK;
       }
@@ -3558,7 +3558,7 @@ word18 get_BAR_address (cpu_state_t *cpu_p, word18 addr)
   {
     if (cpu_p->BAR.BOUND == 0)
         // store fault, out of bounds.
-        doFault (FAULT_STR, fst_str_oob, "BAR store fault; out of bounds");
+        doFault (cpu_p, FAULT_STR, fst_str_oob, "BAR store fault; out of bounds");
 
     // A program is kept within certain limits by subtracting the
     // unrelocated computed address from the address bound. If the result
@@ -3571,7 +3571,7 @@ word18 get_BAR_address (cpu_state_t *cpu_p, word18 addr)
     //
     if (addr >= (((word18) cpu_p->BAR.BOUND) << 9))
         // store fault, out of bounds.
-        doFault (FAULT_STR, fst_str_oob, "BAR store fault; out of bounds");
+        doFault (cpu_p, FAULT_STR, fst_str_oob, "BAR store fault; out of bounds");
     
     word18 barAddr = (addr + (((word18) cpu_p->BAR.BASE) << 9)) & 0777777;
     return barAddr;
