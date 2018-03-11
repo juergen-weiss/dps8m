@@ -312,9 +312,9 @@ static void modify_dsptw (cpu_state_t *cpu_p, word15 segno)
     PTWx1 = SETBIT (PTWx1, 9);
     core_write_unlock (cpu_p, (cpu_p->DSBR.ADDR + x1) & PAMASK, PTWx1, __func__);
 #else
-    core_read ((cpu_p->DSBR.ADDR + x1) & PAMASK, & PTWx1, __func__);
+    core_read (cpu_p, (cpu_p->DSBR.ADDR + x1) & PAMASK, & PTWx1, __func__);
     PTWx1 = SETBIT (PTWx1, 9);
-    core_write ((cpu_p->DSBR.ADDR + x1) & PAMASK, PTWx1, __func__);
+    core_write (cpu_p, (cpu_p->DSBR.ADDR + x1) & PAMASK, PTWx1, __func__);
 #endif
     
 #ifdef TEST_FENCE

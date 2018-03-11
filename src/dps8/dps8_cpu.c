@@ -1267,11 +1267,11 @@ t_stat simh_hooks (void)
 // This is needed for BCE_TRAP in install scripts
     // sim_brk_test expects a 32 bit address; PPR.IC into the low 18, and
     // PPR.PSR into the high 12
-    if (sim_brk_summ &&
-        sim_brk_test ((cpu_p->PPR.IC & 0777777) |
-                      ((((t_addr) cpu_p->PPR.PSR) & 037777) << 18),
-                      SWMASK ('E')))  /* breakpoint? */
-      return STOP_BKPT; /* stop simulation */
+    //    if (sim_brk_summ &&
+    //    sim_brk_test ((cpu_p->PPR.IC & 0777777) |
+    //                  ((((t_addr) cpu_p->PPR.PSR) & 037777) << 18),
+    //                  SWMASK ('E')))  /* breakpoint? */
+    //  return STOP_BKPT; /* stop simulation */
 #ifndef SPEED
     if (sim_deb_break && cpu_p->cycleCnt >= sim_deb_break)
       return STOP_BKPT; /* stop simulation */
@@ -1427,6 +1427,11 @@ t_stat sim_instr (void)
 #endif
     return reason;
   }
+#else
+t_stat sim_instr (void)
+  {
+    return (threadz_sim_instr (&cpus[0]));
+  }
 #endif
 
 #if !defined(THREADZ) && !defined(LOCKLESS)
@@ -1538,10 +1543,6 @@ static void do_LUF_fault (cpu_state_t *cpu_p)
 #endif
     doFault (cpu_p, FAULT_LUF, fst_zero, "instruction cycle lockup");
   }
-
-#if !defined(THREADZ) && !defined(LOCKLESS)
-#define threadz_sim_instr sim_instr
-#endif
 
 /*
  * addr_modes_e get_addr_mode()

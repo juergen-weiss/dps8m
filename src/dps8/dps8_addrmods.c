@@ -1044,7 +1044,7 @@ startCA:;
 #ifdef LOCKLESS
 		core_write_unlock(cpu_p, cpu_p->iefpFinalAddress, indword, __func__);
 #else
-		Write (saveCA, indword, APU_DATA_STORE);
+		Write (cpu_p, saveCA, indword, APU_DATA_STORE);
 #endif
 
 #ifdef TEST_FENCE
@@ -1120,7 +1120,7 @@ startCA:;
 #ifdef LOCKLESS
 		core_write_unlock(cpu_p, cpu_p->iefpFinalAddress, indword, __func__);
 #else
-                Write (saveCA, indword, APU_DATA_STORE);
+                Write (cpu_p, saveCA, indword, APU_DATA_STORE);
 #endif
 
 #ifdef TEST_FENCE
@@ -1202,7 +1202,7 @@ startCA:;
 #ifdef LOCKLESS
 		core_write_unlock(cpu_p, cpu_p->iefpFinalAddress, indword, __func__);
 #else
-                Write (saveCA, indword, APU_DATA_STORE);
+                Write (cpu_p, saveCA, indword, APU_DATA_STORE);
 #endif
 
 #ifdef TEST_FENCE
@@ -1281,7 +1281,7 @@ startCA:;
 #ifdef LOCKLESS
 		core_write_unlock(cpu_p, cpu_p->iefpFinalAddress, indword, __func__);
 #else
-                Write (saveCA, indword, APU_DATA_STORE);
+                Write (cpu_p, saveCA, indword, APU_DATA_STORE);
 #endif
 
 #ifdef TEST_FENCE
@@ -1371,7 +1371,7 @@ startCA:;
 #ifdef LOCKLESS
 		core_write_unlock(cpu_p, cpu_p->iefpFinalAddress, indword, __func__);
 #else
-                Write (saveCA, indword, APU_DATA_STORE);
+                Write (cpu_p, saveCA, indword, APU_DATA_STORE);
 #endif
 
 #ifdef TEST_FENCE
@@ -1482,7 +1482,7 @@ startCA:;
 #ifdef LOCKLESS
 		core_write_unlock(cpu_p, cpu_p->iefpFinalAddress, indword, __func__);
 #else 
-                Write (saveCA, indword, APU_DATA_STORE);
+                Write (cpu_p, saveCA, indword, APU_DATA_STORE);
 #endif
 
 #ifdef TEST_FENCE

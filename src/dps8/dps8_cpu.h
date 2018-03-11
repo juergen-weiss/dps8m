@@ -2293,7 +2293,7 @@ void add_APU_history (enum APUH_e op);
 #endif
 void add_history_force (cpu_state_t *cpu_p, uint hset, word36 w0, word36 w1);
 word18 get_BAR_address(cpu_state_t *cpu_p, word18 addr);
-#if defined(THREADZ) || defined(LOCKLESS)
 t_stat threadz_sim_instr (cpu_state_t *cpu_p);
+#if defined(THREADZ) || defined(LOCKLESS)
 void * cpu_thread_main (void * arg);
 #endif

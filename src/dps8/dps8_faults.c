@@ -654,7 +654,7 @@ sim_debug (DBG_FAULT, & cpu_dev, "cycle %u ndes %u fn %u v %u\n", cpu_p->cycle, 
 #if !defined(THREADZ) && !defined(LOCKLESS)
 #ifndef PANEL
 #ifndef ROUND_ROBIN
-            if ((! sample_interrupts ()) &&
+            if ((! sample_interrupts (cpu_p)) &&
                 (sim_qcount () == 0))  // XXX If clk_svc is implemented it will 
                                      // break this logic
               {
