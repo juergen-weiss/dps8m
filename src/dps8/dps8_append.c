@@ -33,14 +33,14 @@
 #include "threadz.h"
 #endif
 
-#define DBG_CTR cpu.cycleCnt
+#define DBG_CTR cpu_p->cycleCnt
 
 /**
  * The appending unit ...
  */
 
 #ifdef TESTING
-#define DBG_CTR cpu.cycleCnt
+#define DBG_CTR cpu_p->cycleCnt
 #define DBGAPP(...) sim_debug (DBG_APPENDING, & cpu_dev, __VA_ARGS__)
 #else
 #define DBGAPP(...)
@@ -50,52 +50,52 @@
 void set_apu_status (apuStatusBits status)
   {
 #if 1
-    word12 FCT = cpu.cu.APUCycleBits & MASK3;
-    cpu.cu.APUCycleBits = (status & 07770) | FCT;
+    word12 FCT = cpu_p->cu.APUCycleBits & MASK3;
+    cpu_p->cu.APUCycleBits = (status & 07770) | FCT;
 #else
-    cpu.cu.PI_AP = 0;
-    cpu.cu.DSPTW = 0;
-    cpu.cu.SDWNP = 0;
-    cpu.cu.SDWP  = 0;
-    cpu.cu.PTW   = 0;
-    cpu.cu.PTW2  = 0;
-    cpu.cu.FAP   = 0;
-    cpu.cu.FANP  = 0;
-    cpu.cu.FABS  = 0;
+    cpu_p->cu.PI_AP = 0;
+    cpu_p->cu.DSPTW = 0;
+    cpu_p->cu.SDWNP = 0;
+    cpu_p->cu.SDWP  = 0;
+    cpu_p->cu.PTW   = 0;
+    cpu_p->cu.PTW2  = 0;
+    cpu_p->cu.FAP   = 0;
+    cpu_p->cu.FANP  = 0;
+    cpu_p->cu.FABS  = 0;
     switch (status)
       {
         case apuStatus_PI_AP:
-          cpu.cu.PI_AP = 1;
+          cpu_p->cu.PI_AP = 1;
           break;
         case apuStatus_DSPTW:
         case apuStatus_MDSPTW: // XXX this doesn't seem like the right solution.
                                // XXX there is a MDSPTW bit in the APU history
                                // register, but not in the CU.
-          cpu.cu.DSPTW = 1;
+          cpu_p->cu.DSPTW = 1;
           break;
         case apuStatus_SDWNP:
-          cpu.cu.SDWNP = 1;
+          cpu_p->cu.SDWNP = 1;
           break;
         case apuStatus_SDWP:
-          cpu.cu.SDWP  = 1;
+          cpu_p->cu.SDWP  = 1;
           break;
         case apuStatus_PTW:
         case apuStatus_MPTW: // XXX this doesn't seem like the right solution.
                              // XXX there is a MPTW bit in the APU history
                              // XXX register, but not in the CU.
-          cpu.cu.PTW   = 1;
+          cpu_p->cu.PTW   = 1;
           break;
         case apuStatus_PTW2:
-          cpu.cu.PTW2  = 1;
+          cpu_p->cu.PTW2  = 1;
           break;
         case apuStatus_FAP:
-          cpu.cu.FAP   = 1;
+          cpu_p->cu.FAP   = 1;
           break;
         case apuStatus_FANP:
-          cpu.cu.FANP  = 1;
+          cpu_p->cu.FANP  = 1;
           break;
         case apuStatus_FABS:
-          cpu.cu.FABS  = 1;
+          cpu_p->cu.FABS  = 1;
           break;
       }
 #endif
@@ -136,7 +136,7 @@ static void selftest_ptwaw (void)
 
     for (int i = 0; i < N_WAM_ENTRIES; i ++)
       {
-        ptw_s * p = cpu.PTWAM + i;
+        ptw_s * p = cpu_p->PTWAM + i;
         if (p->USE > N_WAM_ENTRIES - 1)
           sim_printf ("PTWAM[%d].USE is %d; > %d!\n",
                       i, p->USE, N_WAM_ENTRIES - 1);
@@ -157,42 +157,42 @@ static void selftest_ptwaw (void)
  * implement ldbr instruction
  */
 
-void do_ldbr (word36 * Ypair)
+void do_ldbr (cpu_state_t *cpu_p, word36 * Ypair)
   {
     CPTUR (cptUseDSBR);
 #ifdef WAM
-    if (! cpu.switches.disable_wam) 
+    if (! cpu_p->switches.disable_wam) 
       {
-        if (cpu.cu.SD_ON) 
+        if (cpu_p->cu.SD_ON) 
           {
             // If SDWAM is enabled, then
             //   0 -> C(SDWAM(i).FULL) for i = 0, 1, ..., 15
             //   i -> C(SDWAM(i).USE) for i = 0, 1, ..., 15
             for (uint i = 0; i < N_WAM_ENTRIES; i ++)
               {
-                cpu.SDWAM[i].FE = 0;
+                cpu_p->SDWAM[i].FE = 0;
 #ifdef L68
-                cpu.SDWAM[i].USE = (word4) i;
+                cpu_p->SDWAM[i].USE = (word4) i;
 #endif
 #ifdef DPS8M
-                cpu.SDWAM[i].USE = 0;
+                cpu_p->SDWAM[i].USE = 0;
 #endif
               }
           }
 
-        if (cpu.cu.PT_ON) 
+        if (cpu_p->cu.PT_ON) 
           {
             // If PTWAM is enabled, then
             //   0 -> C(PTWAM(i).FULL) for i = 0, 1, ..., 15
             //   i -> C(PTWAM(i).USE) for i = 0, 1, ..., 15
             for (uint i = 0; i < N_WAM_ENTRIES; i ++)
               {
-                cpu.PTWAM[i].FE = 0;
+                cpu_p->PTWAM[i].FE = 0;
 #ifdef L68
-                cpu.PTWAM[i].USE = (word4) i;
+                cpu_p->PTWAM[i].USE = (word4) i;
 #endif
 #ifdef DPS8M
-                cpu.PTWAM[i].USE = 0;
+                cpu_p->PTWAM[i].USE = 0;
 #endif
               }
 #ifdef do_selftestPTWAM
@@ -201,29 +201,29 @@ void do_ldbr (word36 * Ypair)
           }
       }
 #else
-    cpu.SDW0.FE = 0;
-    cpu.SDW0.USE = 0;
-    cpu.PTW0.FE = 0;
-    cpu.PTW0.USE = 0;
+    cpu_p->SDW0.FE = 0;
+    cpu_p->SDW0.USE = 0;
+    cpu_p->PTW0.FE = 0;
+    cpu_p->PTW0.USE = 0;
 #endif // WAM
 
     // If cache is enabled, reset all cache column and level full flags
     // XXX no cache
 
     // C(Y-pair) 0,23 -> C(DSBR.ADDR)
-    cpu.DSBR.ADDR = (Ypair[0] >> (35 - 23)) & PAMASK;
+    cpu_p->DSBR.ADDR = (Ypair[0] >> (35 - 23)) & PAMASK;
 
     // C(Y-pair) 37,50 -> C(DSBR.BOUND)
-    cpu.DSBR.BND = (Ypair[1] >> (71 - 50)) & 037777;
+    cpu_p->DSBR.BND = (Ypair[1] >> (71 - 50)) & 037777;
 
     // C(Y-pair) 55 -> C(DSBR.U)
-    cpu.DSBR.U = (Ypair[1] >> (71 - 55)) & 01;
+    cpu_p->DSBR.U = (Ypair[1] >> (71 - 55)) & 01;
 
     // C(Y-pair) 60,71 -> C(DSBR.STACK)
-    cpu.DSBR.STACK = (Ypair[1] >> (71 - 71)) & 07777;
+    cpu_p->DSBR.STACK = (Ypair[1] >> (71 - 71)) & 07777;
     DBGAPP ("ldbr 0 -> SDWAM/PTWAM[*].F, i -> SDWAM/PTWAM[i].USE, "
             "DSBR.ADDR 0%o, DSBR.BND 0%o, DSBR.U 0%o, DSBR.STACK 0%o\n",
-            cpu.DSBR.ADDR, cpu.DSBR.BND, cpu.DSBR.U, cpu.DSBR.STACK); 
+            cpu_p->DSBR.ADDR, cpu_p->DSBR.BND, cpu_p->DSBR.U, cpu_p->DSBR.STACK); 
   }
 
 
@@ -234,48 +234,48 @@ void do_ldbr (word36 * Ypair)
 
 // CANFAULT
 
-static void fetch_dsptw (word15 segno)
+static void fetch_dsptw (cpu_state_t *cpu_p, word15 segno)
   {
     DBGAPP ("%s segno 0%o\n", __func__, segno);
-    PNL (L68_ (cpu.apu.state |= apu_FDPT;))
+    PNL (L68_ (cpu_p->apu.state |= apu_FDPT;))
 
-    if (2 * segno >= 16 * (cpu.DSBR.BND + 1))
+    if (2 * segno >= 16 * (cpu_p->DSBR.BND + 1))
       {
         DBGAPP ("%s ACV15\n", __func__);
         // generate access violation, out of segment bounds fault
-        PNL (cpu.acvFaults |= ACV15;)
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+        PNL (cpu_p->acvFaults |= ACV15;)
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         doFault (FAULT_ACV, fst_acv15,
                  "acvFault: fetch_dsptw out of segment bounds fault");
       }
-    set_apu_status (apuStatus_DSPTW);
+    set_apu_status (cpu_p, apuStatus_DSPTW);
 
 #ifndef SPEED
     word24 y1 = (2u * segno) % 1024u;
 #endif
     word24 x1 = (2u * segno) / 1024u; // floor
 
-    PNL (cpu.lastPTWOffset = segno;)
-    PNL (cpu.lastPTWIsDS = true;)
+    PNL (cpu_p->lastPTWOffset = segno;)
+    PNL (cpu_p->lastPTWIsDS = true;)
 
     word36 PTWx1;
-    core_read ((cpu.DSBR.ADDR + x1) & PAMASK, & PTWx1, __func__);
+    core_read (cpu_p, (cpu_p->DSBR.ADDR + x1) & PAMASK, & PTWx1, __func__);
     
-    cpu.PTW0.ADDR = GETHI (PTWx1);
-    cpu.PTW0.U = TSTBIT (PTWx1, 9);
-    cpu.PTW0.M = TSTBIT (PTWx1, 6);
-    cpu.PTW0.DF = TSTBIT (PTWx1, 2);
-    cpu.PTW0.FC = PTWx1 & 3;
+    cpu_p->PTW0.ADDR = GETHI (PTWx1);
+    cpu_p->PTW0.U = TSTBIT (PTWx1, 9);
+    cpu_p->PTW0.M = TSTBIT (PTWx1, 6);
+    cpu_p->PTW0.DF = TSTBIT (PTWx1, 2);
+    cpu_p->PTW0.FC = PTWx1 & 3;
     
 #ifdef L68
-    if (cpu.MR_cache.emr && cpu.MR_cache.ihr)
+    if (cpu_p->MR_cache.emr && cpu_p->MR_cache.ihr)
       addAPUhist (APUH_FDSPTW);
 #endif
 
     DBGAPP ("%s x1 0%o y1 0%o DSBR.ADDR 0%o PTWx1 0%012"PRIo64" "
             "PTW0: ADDR 0%o U %o M %o F %o FC %o\n",
-            __func__, x1, y1, cpu.DSBR.ADDR, PTWx1, cpu.PTW0.ADDR, cpu.PTW0.U,
-            cpu.PTW0.M, cpu.PTW0.DF, cpu.PTW0.FC);
+            __func__, x1, y1, cpu_p->DSBR.ADDR, PTWx1, cpu_p->PTW0.ADDR, cpu_p->PTW0.U,
+            cpu_p->PTW0.M, cpu_p->PTW0.DF, cpu_p->PTW0.FC);
   }
 
 
@@ -285,12 +285,12 @@ static void fetch_dsptw (word15 segno)
 
 // CANFAULT
 
-static void modify_dsptw (word15 segno)
+static void modify_dsptw (cpu_state_t *cpu_p, word15 segno)
   {
 
-    PNL (L68_ (cpu.apu.state |= apu_MDPT;))
+    PNL (L68_ (cpu_p->apu.state |= apu_MDPT;))
 
-    set_apu_status (apuStatus_MDSPTW); 
+    set_apu_status (cpu_p, apuStatus_MDSPTW); 
 
     word24 x1 = (2u * segno) / 1024u; // floor
     
@@ -308,13 +308,13 @@ static void modify_dsptw (word15 segno)
 
     word36 PTWx1;
 #ifdef LOCKLESS
-    core_read_lock ((cpu.DSBR.ADDR + x1) & PAMASK, & PTWx1, __func__);
+    core_read_lock (cpu_p, (cpu_p->DSBR.ADDR + x1) & PAMASK, & PTWx1, __func__);
     PTWx1 = SETBIT (PTWx1, 9);
-    core_write_unlock ((cpu.DSBR.ADDR + x1) & PAMASK, PTWx1, __func__);
+    core_write_unlock (cpu_p, (cpu_p->DSBR.ADDR + x1) & PAMASK, PTWx1, __func__);
 #else
-    core_read ((cpu.DSBR.ADDR + x1) & PAMASK, & PTWx1, __func__);
+    core_read ((cpu_p->DSBR.ADDR + x1) & PAMASK, & PTWx1, __func__);
     PTWx1 = SETBIT (PTWx1, 9);
-    core_write ((cpu.DSBR.ADDR + x1) & PAMASK, PTWx1, __func__);
+    core_write ((cpu_p->DSBR.ADDR + x1) & PAMASK, PTWx1, __func__);
 #endif
     
 #ifdef TEST_FENCE
@@ -325,9 +325,9 @@ static void modify_dsptw (word15 segno)
       unlock_rmw ();
 #endif
 
-    cpu.PTW0.U = 1;
+    cpu_p->PTW0.U = 1;
 #ifdef L68
-    if (cpu.MR_cache.emr && cpu.MR_cache.ihr)
+    if (cpu_p->MR_cache.emr && cpu_p->MR_cache.ihr)
       addAPUhist (APUH_MDSPTW);
 #endif
   }
@@ -354,11 +354,11 @@ static word6 calc_hit_am (word6 LRU, uint hit_level)
   }
 #endif
 
-static sdw_s * fetch_sdw_from_sdwam (word15 segno)
+static sdw_s * fetch_sdw_from_sdwam (cpu_state_t *cpu_p, word15 segno)
   {
     DBGAPP ("%s(0):segno=%05o\n", __func__, segno);
     
-    if (cpu.switches.disable_wam || ! cpu.cu.SD_ON)
+    if (cpu_p->switches.disable_wam || ! cpu_p->cu.SD_ON)
       {
         DBGAPP ("%s(0): SDWAM disabled\n", __func__);
         return NULL;
@@ -369,15 +369,15 @@ static sdw_s * fetch_sdw_from_sdwam (word15 segno)
     for (int _n = 0; _n < nwam; _n++)
       {
         // make certain we initialize SDWAM prior to use!!!
-        if (cpu.SDWAM[_n].FE && segno == cpu.SDWAM[_n].POINTER)
+        if (cpu_p->SDWAM[_n].FE && segno == cpu_p->SDWAM[_n].POINTER)
           {
             DBGAPP ("%s(1):found match for segno %05o "
                     "at _n=%d\n",
                      __func__, segno, _n);
             
-            cpu.cu.SDWAMM = 1;
-            cpu.SDWAMR = (word4) _n;
-            cpu.SDW = & cpu.SDWAM[_n];
+            cpu_p->cu.SDWAMM = 1;
+            cpu_p->SDWAMR = (word4) _n;
+            cpu_p->SDW = & cpu_p->SDWAM[_n];
             
             // If the SDWAM match logic circuitry indicates a hit, all usage
             // counts (SDWAM.USE) greater than the usage count of the register
@@ -387,16 +387,16 @@ static sdw_s * fetch_sdw_from_sdwam (word15 segno)
 
             for (int _h = 0; _h < nwam; _h++)
               {
-                if (cpu.SDWAM[_h].USE > cpu.SDW->USE)
-                  cpu.SDWAM[_h].USE -= 1;
+                if (cpu_p->SDWAM[_h].USE > cpu_p->SDW->USE)
+                  cpu_p->SDWAM[_h].USE -= 1;
               }
-            cpu.SDW->USE = N_WAM_ENTRIES - 1;
+            cpu_p->SDW->USE = N_WAM_ENTRIES - 1;
  
             char buf[256];
             DBGAPP ("%s(2):SDWAM[%d]=%s\n",
-                     __func__, _n, str_sdw (buf, cpu.SDW));
+                     __func__, _n, str_sdw (buf, cpu_p->SDW));
 
-            return cpu.SDW;
+            return cpu_p->SDW;
           }
       }
 #endif
@@ -406,35 +406,35 @@ static sdw_s * fetch_sdw_from_sdwam (word15 segno)
     sdw_s *p;
     for (toffset = 0; toffset < 64; toffset += 16)
       {
-        p = & cpu.SDWAM[toffset + setno];
+        p = & cpu_p->SDWAM[toffset + setno];
         if (p->FE && segno == p->POINTER)
           {
             DBGAPP ("%s(1):found match for segno %05o "
                     "at _n=%d\n",
                     __func__, segno, toffset + setno);
             
-            cpu.cu.SDWAMM = 1;
-            cpu.SDWAMR = (word6) (toffset + setno);
-            cpu.SDW = p; // export pointer for appending
+            cpu_p->cu.SDWAMM = 1;
+            cpu_p->SDWAMR = (word6) (toffset + setno);
+            cpu_p->SDW = p; // export pointer for appending
 
             word6 u = calc_hit_am (p->USE, toffset >> 4);
             for (toffset = 0; toffset < 64; toffset += 16) // update LRU
               {
-                p = & cpu.SDWAM[toffset + setno];
+                p = & cpu_p->SDWAM[toffset + setno];
                 if (p->FE) 
                   p->USE = u;
               }
 
             char buf[256];
             DBGAPP ("%s(2):SDWAM[%d]=%s\n",
-                    __func__, toffset + setno, str_sdw (buf, cpu.SDW));
-            return cpu.SDW;
+                    __func__, toffset + setno, str_sdw (buf, cpu_p->SDW));
+            return cpu_p->SDW;
           }
       }
 #endif
     DBGAPP ("%s(3):SDW for segment %05o not found in SDWAM\n",
             __func__, segno);
-    cpu.cu.SDWAMM = 0;
+    cpu_p->cu.SDWAMM = 0;
     return NULL;    // segment not referenced in SDWAM
   }
 #endif // WAM
@@ -444,110 +444,110 @@ static sdw_s * fetch_sdw_from_sdwam (word15 segno)
  */
 // CANFAULT
 
-static void fetch_psdw (word15 segno)
+static void fetch_psdw (cpu_state_t *cpu_p, word15 segno)
   {
     DBGAPP ("%s(0):segno=%05o\n",
             __func__, segno);
 
-    PNL (L68_ (cpu.apu.state |= apu_FSDP;))
+    PNL (L68_ (cpu_p->apu.state |= apu_FSDP;))
 
-    set_apu_status (apuStatus_SDWP);
+    set_apu_status (cpu_p, apuStatus_SDWP);
     word24 y1 = (2 * segno) % 1024;
     
     word36 SDWeven, SDWodd;
     
-    core_read2 (((((word24) cpu.PTW0.ADDR & 0777760) << 6) + y1) & PAMASK, 
+    core_read2 (cpu_p, ((((word24) cpu_p->PTW0.ADDR & 0777760) << 6) + y1) & PAMASK, 
                 & SDWeven, & SDWodd, __func__);
     
     // even word
-    cpu.SDW0.ADDR = (SDWeven >> 12) & 077777777;
-    cpu.SDW0.R1 = (SDWeven >> 9) & 7;
-    cpu.SDW0.R2 = (SDWeven >> 6) & 7;
-    cpu.SDW0.R3 = (SDWeven >> 3) & 7;
-    cpu.SDW0.DF = TSTBIT (SDWeven, 2);
-    cpu.SDW0.FC = SDWeven & 3;
+    cpu_p->SDW0.ADDR = (SDWeven >> 12) & 077777777;
+    cpu_p->SDW0.R1 = (SDWeven >> 9) & 7;
+    cpu_p->SDW0.R2 = (SDWeven >> 6) & 7;
+    cpu_p->SDW0.R3 = (SDWeven >> 3) & 7;
+    cpu_p->SDW0.DF = TSTBIT (SDWeven, 2);
+    cpu_p->SDW0.FC = SDWeven & 3;
     
     // odd word
-    cpu.SDW0.BOUND = (SDWodd >> 21) & 037777;
-    cpu.SDW0.R = TSTBIT (SDWodd, 20);
-    cpu.SDW0.E = TSTBIT (SDWodd, 19);
-    cpu.SDW0.W = TSTBIT (SDWodd, 18);
-    cpu.SDW0.P = TSTBIT (SDWodd, 17);
-    cpu.SDW0.U = TSTBIT (SDWodd, 16);
-    cpu.SDW0.G = TSTBIT (SDWodd, 15);
-    cpu.SDW0.C = TSTBIT (SDWodd, 14);
-    cpu.SDW0.EB = SDWodd & 037777;
+    cpu_p->SDW0.BOUND = (SDWodd >> 21) & 037777;
+    cpu_p->SDW0.R = TSTBIT (SDWodd, 20);
+    cpu_p->SDW0.E = TSTBIT (SDWodd, 19);
+    cpu_p->SDW0.W = TSTBIT (SDWodd, 18);
+    cpu_p->SDW0.P = TSTBIT (SDWodd, 17);
+    cpu_p->SDW0.U = TSTBIT (SDWodd, 16);
+    cpu_p->SDW0.G = TSTBIT (SDWodd, 15);
+    cpu_p->SDW0.C = TSTBIT (SDWodd, 14);
+    cpu_p->SDW0.EB = SDWodd & 037777;
     
 #ifdef L68
-    if (cpu.MR_cache.emr && cpu.MR_cache.ihr)
+    if (cpu_p->MR_cache.emr && cpu_p->MR_cache.ihr)
       addAPUhist (APUH_FSDWP);
 #endif
     DBGAPP ("%s y1 0%o p->ADDR 0%o SDW 0%012"PRIo64" 0%012"PRIo64" "
             "ADDR %o R %o%o%o BOUND 0%o REWPUGC %o%o%o%o%o%o%o "
             "F %o FC %o FE %o USE %o\n",
-            __func__, y1, cpu.PTW0.ADDR, SDWeven, SDWodd, cpu.SDW0.ADDR,
-            cpu.SDW0.R1, cpu.SDW0.R2, cpu.SDW0.R3, cpu.SDW0.BOUND,
-            cpu.SDW0.R, cpu.SDW0.E, cpu.SDW0.W, cpu.SDW0.P, cpu.SDW0.U,
-            cpu.SDW0.G, cpu.SDW0.C, cpu.SDW0.DF, cpu.SDW0.FC, cpu.SDW0.FE,
-            cpu.SDW0.USE);
+            __func__, y1, cpu_p->PTW0.ADDR, SDWeven, SDWodd, cpu_p->SDW0.ADDR,
+            cpu_p->SDW0.R1, cpu_p->SDW0.R2, cpu_p->SDW0.R3, cpu_p->SDW0.BOUND,
+            cpu_p->SDW0.R, cpu_p->SDW0.E, cpu_p->SDW0.W, cpu_p->SDW0.P, cpu_p->SDW0.U,
+            cpu_p->SDW0.G, cpu_p->SDW0.C, cpu_p->SDW0.DF, cpu_p->SDW0.FC, cpu_p->SDW0.FE,
+            cpu_p->SDW0.USE);
   }
 
 // Nonpaged SDW Fetch
 // Fetches an SDW from an unpaged descriptor segment.
 // CANFAULT
 
-static void fetch_nsdw (word15 segno)
+static void fetch_nsdw (cpu_state_t *cpu_p, word15 segno)
   {
     DBGAPP ("%s (0):segno=%05o\n", __func__, segno);
 
-    PNL (L68_ (cpu.apu.state |= apu_FSDN;))
+    PNL (L68_ (cpu_p->apu.state |= apu_FSDN;))
 
-    set_apu_status (apuStatus_SDWNP);
+    set_apu_status (cpu_p, apuStatus_SDWNP);
 
-    if (2 * segno >= 16 * (cpu.DSBR.BND + 1))
+    if (2 * segno >= 16 * (cpu_p->DSBR.BND + 1))
       {
         DBGAPP ("%s (1):Access Violation, out of segment bounds for "
                 "segno=%05o DSBR.BND=%d\n",
-                __func__, segno, cpu.DSBR.BND);
+                __func__, segno, cpu_p->DSBR.BND);
         // generate access violation, out of segment bounds fault
-        PNL (cpu.acvFaults |= ACV15;)
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+        PNL (cpu_p->acvFaults |= ACV15;)
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         doFault (FAULT_ACV, fst_acv15,
                  "acvFault fetch_dsptw: out of segment bounds fault");
       }
     DBGAPP ("%s (2):fetching SDW from %05o\n",
-            __func__, cpu.DSBR.ADDR + 2u * segno);
+            __func__, cpu_p->DSBR.ADDR + 2u * segno);
 
     word36 SDWeven, SDWodd;
-    core_read2 ((cpu.DSBR.ADDR + 2u * segno) & PAMASK,
+    core_read2 (cpu_p, (cpu_p->DSBR.ADDR + 2u * segno) & PAMASK,
                 & SDWeven, & SDWodd, __func__);
     
     // even word
-    cpu.SDW0.ADDR = (SDWeven >> 12) & 077777777;
-    cpu.SDW0.R1 = (SDWeven >> 9) & 7;
-    cpu.SDW0.R2 = (SDWeven >> 6) & 7;
-    cpu.SDW0.R3 = (SDWeven >> 3) & 7;
-    cpu.SDW0.DF = TSTBIT (SDWeven, 2);
-    cpu.SDW0.FC = SDWeven & 3;
+    cpu_p->SDW0.ADDR = (SDWeven >> 12) & 077777777;
+    cpu_p->SDW0.R1 = (SDWeven >> 9) & 7;
+    cpu_p->SDW0.R2 = (SDWeven >> 6) & 7;
+    cpu_p->SDW0.R3 = (SDWeven >> 3) & 7;
+    cpu_p->SDW0.DF = TSTBIT (SDWeven, 2);
+    cpu_p->SDW0.FC = SDWeven & 3;
     
     // odd word
-    cpu.SDW0.BOUND = (SDWodd >> 21) & 037777;
-    cpu.SDW0.R = TSTBIT (SDWodd, 20);
-    cpu.SDW0.E = TSTBIT (SDWodd, 19);
-    cpu.SDW0.W = TSTBIT (SDWodd, 18);
-    cpu.SDW0.P = TSTBIT (SDWodd, 17);
-    cpu.SDW0.U = TSTBIT (SDWodd, 16);
-    cpu.SDW0.G = TSTBIT (SDWodd, 15);
-    cpu.SDW0.C = TSTBIT (SDWodd, 14);
-    cpu.SDW0.EB = SDWodd & 037777;
+    cpu_p->SDW0.BOUND = (SDWodd >> 21) & 037777;
+    cpu_p->SDW0.R = TSTBIT (SDWodd, 20);
+    cpu_p->SDW0.E = TSTBIT (SDWodd, 19);
+    cpu_p->SDW0.W = TSTBIT (SDWodd, 18);
+    cpu_p->SDW0.P = TSTBIT (SDWodd, 17);
+    cpu_p->SDW0.U = TSTBIT (SDWodd, 16);
+    cpu_p->SDW0.G = TSTBIT (SDWodd, 15);
+    cpu_p->SDW0.C = TSTBIT (SDWodd, 14);
+    cpu_p->SDW0.EB = SDWodd & 037777;
     
 #ifdef L68
-    if (cpu.MR_cache.emr && cpu.MR_cache.ihr)
+    if (cpu_p->MR_cache.emr && cpu_p->MR_cache.ihr)
       addAPUhist (0 /* No fetch no paged bit */);
 #endif
 #ifndef SPEED
     char buf[256];
-    DBGAPP ("%s (2):SDW0=%s\n", __func__, str_SDW0 (buf, & cpu.SDW0));
+    DBGAPP ("%s (2):SDW0=%s\n", __func__, str_SDW0 (buf, & cpu_p->SDW0));
 #endif
   }
 
@@ -588,12 +588,12 @@ static char *str_sdw (char * buf, sdw_s *SDW)
  * dump SDWAM...
  */
 
-t_stat dump_sdwam (void)
+t_stat dump_sdwam (cpu_state_t *cpu_p, void)
   {
     char buf[256];
     for (int _n = 0; _n < N_WAM_ENTRIES; _n++)
       {
-        sdw_s *p = & cpu.SDWAM[_n];
+        sdw_s *p = & cpu_p->SDWAM[_n];
         
         if (p->FE)
           sim_printf ("SDWAM n:%d %s\n", _n, str_sdw (buf, p));
@@ -629,25 +629,25 @@ static uint to_be_discarded_am (word6 LRU)
  * load the current in-core SDW0 into the SDWAM ...
  */
 
-static void load_sdwam (word15 segno, UNUSED bool nomatch)
+static void load_sdwam (cpu_state_t *cpu_p, word15 segno, UNUSED bool nomatch)
   {
 #ifndef WAM
-    cpu.SDW0.POINTER = segno;
-    cpu.SDW0.USE = 0;
+    cpu_p->SDW0.POINTER = segno;
+    cpu_p->SDW0.USE = 0;
             
-    cpu.SDW0.FE = true;     // in use by SDWAM
+    cpu_p->SDW0.FE = true;     // in use by SDWAM
             
-    cpu.SDW = & cpu.SDW0;
+    cpu_p->SDW = & cpu_p->SDW0;
             
 #else
-    if (nomatch || cpu.switches.disable_wam || ! cpu.cu.SD_ON)
+    if (nomatch || cpu_p->switches.disable_wam || ! cpu_p->cu.SD_ON)
       {
         DBGAPP ("%s: SDWAM disabled\n", __func__);
-        sdw_s * p = & cpu.SDW0;
+        sdw_s * p = & cpu_p->SDW0;
         p->POINTER = segno;
         p->USE = 0;
         p->FE = true;     // in use by SDWAM
-        cpu.SDW = p;
+        cpu_p->SDW = p;
         return;
       }
 
@@ -661,24 +661,24 @@ static void load_sdwam (word15 segno, UNUSED bool nomatch)
 
     for (int _n = 0; _n < N_WAM_ENTRIES; _n++)
       {
-        sdw_s * p = & cpu.SDWAM[_n];
+        sdw_s * p = & cpu_p->SDWAM[_n];
         if (! p->FE || p->USE == 0)
           {
             DBGAPP ("%s(1):SDWAM[%d] FE=0 || USE=0\n", __func__, _n);
             
-            * p = cpu.SDW0;
+            * p = cpu_p->SDW0;
             p->POINTER = segno;
             p->USE = 0;
             p->FE = true;     // in use by SDWAM
             
             for (int _h = 0; _h < N_WAM_ENTRIES; _h++)
               {
-                sdw_s * q = & cpu.SDWAM[_h];
+                sdw_s * q = & cpu_p->SDWAM[_h];
                 q->USE -= 1;
                 q->USE &= N_WAM_MASK;
               }
             
-            cpu.SDW = p;
+            cpu_p->SDW = p;
             
             char buf[256];
             DBGAPP ("%s(2):SDWAM[%d]=%s\n",
@@ -700,42 +700,42 @@ static void load_sdwam (word15 segno, UNUSED bool nomatch)
     sdw_s *p;
     for (toffset = 0; toffset < 64; toffset += 16)
       {
-        p = & cpu.SDWAM[toffset + setno];
+        p = & cpu_p->SDWAM[toffset + setno];
         if (!p->FE)
           break;
       }
     if (toffset == 64) // all FE==1
       {
         toffset = to_be_discarded_am (p->USE) << 4;
-        p = & cpu.SDWAM[toffset + setno];
+        p = & cpu_p->SDWAM[toffset + setno];
       }
     DBGAPP ("%s(1):SDWAM[%d] FE=0 || LRU\n",
             __func__, toffset + setno);
             
     word6 u = calc_hit_am (p->USE, toffset >> 4); // before loading the SDWAM!
-    * p = cpu.SDW0; // load the SDW
+    * p = cpu_p->SDW0; // load the SDW
     p->POINTER = segno;
     p->FE = true;  // in use
-    cpu.SDW = p; // export pointer for appending
+    cpu_p->SDW = p; // export pointer for appending
 
     for (uint toffset1 = 0; toffset1 < 64; toffset1 += 16) // update LRU
       {
-        p = & cpu.SDWAM[toffset1 + setno];
+        p = & cpu_p->SDWAM[toffset1 + setno];
         if (p->FE) 
           p->USE = u;
       }
             
     char buf[256];
     DBGAPP ("%s(2):SDWAM[%d]=%s\n",
-            __func__, toffset + setno, str_sdw (buf, cpu.SDW));
+            __func__, toffset + setno, str_sdw (buf, cpu_p->SDW));
 #endif
 #endif // WAM
   }
 
 #ifdef WAM
-static ptw_s * fetch_ptw_from_ptwam (word15 segno, word18 CA)
+static ptw_s * fetch_ptw_from_ptwam (cpu_state_t *cpu_p, word15 segno, word18 CA)
   {
-    if (cpu.switches.disable_wam || ! cpu.cu.PT_ON)
+    if (cpu_p->switches.disable_wam || ! cpu_p->cu.PT_ON)
       {
         DBGAPP ("%s: PTWAM disabled\n", __func__);
         return NULL;
@@ -745,15 +745,15 @@ static ptw_s * fetch_ptw_from_ptwam (word15 segno, word18 CA)
     int nwam = N_WAM_ENTRIES;
     for (int _n = 0; _n < nwam; _n++)
       {
-        if (cpu.PTWAM[_n].FE && ((CA >> 6) & 07760) == cpu.PTWAM[_n].PAGENO &&
-            cpu.PTWAM[_n].POINTER == segno)   //_initialized)
+        if (cpu_p->PTWAM[_n].FE && ((CA >> 6) & 07760) == cpu_p->PTWAM[_n].PAGENO &&
+            cpu_p->PTWAM[_n].POINTER == segno)   //_initialized)
           {
             DBGAPP ("%s: found match for segno=%o pageno=%o "
                     "at _n=%d\n",
-                    __func__, segno, cpu.PTWAM[_n].PAGENO, _n);
-            cpu.cu.PTWAMM = 1;
-            cpu.PTWAMR = (word4) _n;
-            cpu.PTW = & cpu.PTWAM[_n];
+                    __func__, segno, cpu_p->PTWAM[_n].PAGENO, _n);
+            cpu_p->cu.PTWAMM = 1;
+            cpu_p->PTWAMR = (word4) _n;
+            cpu_p->PTW = & cpu_p->PTWAM[_n];
             
             // If the PTWAM match logic circuitry indicates a hit, all usage
             // counts (PTWAM.USE) greater than the usage count of the register
@@ -763,17 +763,17 @@ static ptw_s * fetch_ptw_from_ptwam (word15 segno, word18 CA)
 
             for (int _h = 0; _h < nwam; _h++)
               {
-                if (cpu.PTWAM[_h].USE > cpu.PTW->USE)
-                  cpu.PTWAM[_h].USE -= 1; //PTW->USE -= 1;
+                if (cpu_p->PTWAM[_h].USE > cpu_p->PTW->USE)
+                  cpu_p->PTWAM[_h].USE -= 1; //PTW->USE -= 1;
               }
-            cpu.PTW->USE = N_WAM_ENTRIES - 1;
+            cpu_p->PTW->USE = N_WAM_ENTRIES - 1;
 #ifdef do_selftestPTWAM
             selftest_ptwaw ();
 #endif
             DBGAPP ("%s: ADDR 0%o U %o M %o F %o FC %o\n",
-                    __func__, cpu.PTW->ADDR, cpu.PTW->U, cpu.PTW->M,
-                    cpu.PTW->DF, cpu.PTW->FC);
-            return cpu.PTW;
+                    __func__, cpu_p->PTW->ADDR, cpu_p->PTW->U, cpu_p->PTW->M,
+                    cpu_p->PTW->DF, cpu_p->PTW->FC);
+            return cpu_p->PTW;
           }
       }
 #endif
@@ -784,44 +784,44 @@ static ptw_s * fetch_ptw_from_ptwam (word15 segno, word18 CA)
     ptw_s *p;
     for (toffset = 0; toffset < 64; toffset += 16)
       {
-        p = & cpu.PTWAM[toffset + setno];
+        p = & cpu_p->PTWAM[toffset + setno];
 
         if (p->FE && ((CA >> 6) & 07760) == p->PAGENO && p->POINTER == segno)
           {
             DBGAPP ("%s: found match for segno=%o pageno=%o "
                     "at _n=%d\n",
                     __func__, segno, p->PAGENO, toffset + setno);
-            cpu.cu.PTWAMM = 1;
-            cpu.PTWAMR = (word6) (toffset + setno);
-            cpu.PTW = p; // export pointer for appending
+            cpu_p->cu.PTWAMM = 1;
+            cpu_p->PTWAMR = (word6) (toffset + setno);
+            cpu_p->PTW = p; // export pointer for appending
             
             word6 u = calc_hit_am (p->USE, toffset >> 4);
             for (toffset = 0; toffset < 64; toffset += 16) // update LRU
               {
-                p = & cpu.PTWAM[toffset + setno];
+                p = & cpu_p->PTWAM[toffset + setno];
                 if (p->FE) 
                   p->USE = u;
               }
 
             DBGAPP ("%s: ADDR 0%o U %o M %o F %o FC %o\n",
-                    __func__, cpu.PTW->ADDR, cpu.PTW->U, cpu.PTW->M, 
-                    cpu.PTW->DF, cpu.PTW->FC);
-            return cpu.PTW;
+                    __func__, cpu_p->PTW->ADDR, cpu_p->PTW->U, cpu_p->PTW->M, 
+                    cpu_p->PTW->DF, cpu_p->PTW->FC);
+            return cpu_p->PTW;
           }
       }
 #endif
-    cpu.cu.PTWAMM = 0;
+    cpu_p->cu.PTWAMM = 0;
     return NULL;    // page not referenced in PTWAM
   }
 #endif // WAM
 
-static void fetch_ptw (sdw_s *sdw, word18 offset)
+static void fetch_ptw (cpu_state_t *cpu_p, sdw_s *sdw, word18 offset)
   {
     // AL39 p.5-7
     // Fetches a PTW from a page table other than a descriptor segment page
     // table and sets the page accessed bit (PTW.U)
-    PNL (L68_ (cpu.apu.state |= apu_FPTW;))
-    set_apu_status (apuStatus_PTW);
+    PNL (L68_ (cpu_p->apu.state |= apu_FPTW;))
+    set_apu_status (cpu_p, apuStatus_PTW);
 
 #ifndef SPEED
     word24 y2 = offset % 1024;
@@ -832,8 +832,8 @@ static void fetch_ptw (sdw_s *sdw, word18 offset)
     
     DBGAPP ("%s address %08o\n", __func__, sdw->ADDR + x2);
 
-    PNL (cpu.lastPTWOffset = offset;)
-    PNL (cpu.lastPTWIsDS = false;)
+    PNL (cpu_p->lastPTWOffset = offset;)
+    PNL (cpu_p->lastPTWIsDS = false;)
 
 #ifdef TEST_OLIN
           cmpxchg ();
@@ -847,29 +847,29 @@ static void fetch_ptw (sdw_s *sdw, word18 offset)
       lock_rmw ();
 #endif
 #ifdef LOCKLESS
-    core_read_lock ((sdw->ADDR + x2) & PAMASK, & PTWx2, __func__);
+    core_read_lock (cpu_p, (sdw->ADDR + x2) & PAMASK, & PTWx2, __func__);
 #else
-    core_read ((sdw->ADDR + x2) & PAMASK, & PTWx2, __func__);
+    core_read (cpu_p, (sdw->ADDR + x2) & PAMASK, & PTWx2, __func__);
 #endif
     
-    cpu.PTW0.ADDR = GETHI (PTWx2);
-    cpu.PTW0.U = TSTBIT (PTWx2, 9);
-    cpu.PTW0.M = TSTBIT (PTWx2, 6);
-    cpu.PTW0.DF = TSTBIT (PTWx2, 2);
-    cpu.PTW0.FC = PTWx2 & 3;
+    cpu_p->PTW0.ADDR = GETHI (PTWx2);
+    cpu_p->PTW0.U = TSTBIT (PTWx2, 9);
+    cpu_p->PTW0.M = TSTBIT (PTWx2, 6);
+    cpu_p->PTW0.DF = TSTBIT (PTWx2, 2);
+    cpu_p->PTW0.FC = PTWx2 & 3;
 
     // ISOLTS-861 02
 #ifndef LOCKLESS
-    if (! cpu.PTW0.U)
+    if (! cpu_p->PTW0.U)
 #endif
       {
         PTWx2 = SETBIT (PTWx2, 9);
 #ifdef LOCKLESS
-	core_write_unlock ((sdw->ADDR + x2) & PAMASK, PTWx2, __func__);
+	core_write_unlock (cpu_p, (sdw->ADDR + x2) & PAMASK, PTWx2, __func__);
 #else
-        core_write ((sdw->ADDR + x2) & PAMASK, PTWx2, __func__);
+        core_write (cpu_p, (sdw->ADDR + x2) & PAMASK, PTWx2, __func__);
 #endif
-        cpu.PTW0.U = 1;
+        cpu_p->PTW0.U = 1;
       }
     
 #ifdef TEST_FENCE
@@ -881,36 +881,36 @@ static void fetch_ptw (sdw_s *sdw, word18 offset)
 #endif
 
 #ifdef L68
-    if (cpu.MR_cache.emr && cpu.MR_cache.ihr)
+    if (cpu_p->MR_cache.emr && cpu_p->MR_cache.ihr)
       addAPUhist (APUH_FPTW);
 #endif
 
     DBGAPP ("%s x2 0%o y2 0%o sdw->ADDR 0%o PTWx2 0%012"PRIo64" "
             "PTW0: ADDR 0%o U %o M %o F %o FC %o\n",
-            __func__, x2, y2, sdw->ADDR, PTWx2, cpu.PTW0.ADDR, cpu.PTW0.U,
-            cpu.PTW0.M, cpu.PTW0.DF, cpu.PTW0.FC);
+            __func__, x2, y2, sdw->ADDR, PTWx2, cpu_p->PTW0.ADDR, cpu_p->PTW0.U,
+            cpu_p->PTW0.M, cpu_p->PTW0.DF, cpu_p->PTW0.FC);
   }
 
-static void loadPTWAM (word15 segno, word18 offset, UNUSED bool nomatch)
+static void loadPTWAM (cpu_state_t *cpu_p, word15 segno, word18 offset, UNUSED bool nomatch)
   {
 #ifndef WAM
-    cpu.PTW0.PAGENO = (offset >> 6) & 07760;
-    cpu.PTW0.POINTER = segno;
-    cpu.PTW0.USE = 0;
-    cpu.PTW0.FE = true;
+    cpu_p->PTW0.PAGENO = (offset >> 6) & 07760;
+    cpu_p->PTW0.POINTER = segno;
+    cpu_p->PTW0.USE = 0;
+    cpu_p->PTW0.FE = true;
             
-    cpu.PTW = & cpu.PTW0;
+    cpu_p->PTW = & cpu_p->PTW0;
 #else
-    if (nomatch || cpu.switches.disable_wam || ! cpu.cu.PT_ON)
+    if (nomatch || cpu_p->switches.disable_wam || ! cpu_p->cu.PT_ON)
       {
         DBGAPP ("loadPTWAM: PTWAM disabled\n");
-        ptw_s * p = & cpu.PTW0;
+        ptw_s * p = & cpu_p->PTW0;
         p->PAGENO = (offset >> 6) & 07760;  // ISOLTS-861 02, AL39 p.3-22
         p->POINTER = segno;
         p->USE = 0;
         p->FE = true;
             
-        cpu.PTW = p;
+        cpu_p->PTW = p;
         return;
       }
 
@@ -923,11 +923,11 @@ static void loadPTWAM (word15 segno, word18 offset, UNUSED bool nomatch)
 
     for (int _n = 0; _n < N_WAM_ENTRIES; _n++)
       {
-        ptw_s * p = & cpu.PTWAM[_n];
+        ptw_s * p = & cpu_p->PTWAM[_n];
         if (! p->FE || p->USE == 0)
           {
             DBGAPP ("loadPTWAM(1):PTWAM[%d] FE=0 || USE=0\n", _n);
-            *p = cpu.PTW0;
+            *p = cpu_p->PTW0;
             p->PAGENO = (offset >> 6) & 07760;
             p->POINTER = segno;
             p->USE = 0;
@@ -935,17 +935,17 @@ static void loadPTWAM (word15 segno, word18 offset, UNUSED bool nomatch)
             
             for (int _h = 0; _h < N_WAM_ENTRIES; _h++)
               {
-                ptw_s * q = & cpu.PTWAM[_h];
+                ptw_s * q = & cpu_p->PTWAM[_h];
                 q->USE -= 1;
                 q->USE &= N_WAM_MASK;
               }
             
-            cpu.PTW = p;
+            cpu_p->PTW = p;
             DBGAPP ("loadPTWAM(2): ADDR 0%o U %o M %o F %o FC %o "
                     "POINTER=%o PAGENO=%o USE=%d\n",
-                    cpu.PTW->ADDR, cpu.PTW->U, cpu.PTW->M, cpu.PTW->DF,
-                    cpu.PTW->FC, cpu.PTW->POINTER, cpu.PTW->PAGENO,
-                    cpu.PTW->USE);
+                    cpu_p->PTW->ADDR, cpu_p->PTW->U, cpu_p->PTW->M, cpu_p->PTW->DF,
+                    cpu_p->PTW->FC, cpu_p->PTW->POINTER, cpu_p->PTW->PAGENO,
+                    cpu_p->PTW->USE);
 #ifdef do_selftestPTWAM
             selftest_ptwaw ();
 #endif
@@ -963,37 +963,37 @@ static void loadPTWAM (word15 segno, word18 offset, UNUSED bool nomatch)
     ptw_s *p;
     for (toffset = 0; toffset < 64; toffset += 16)
       {
-        p = & cpu.PTWAM[toffset + setno];
+        p = & cpu_p->PTWAM[toffset + setno];
         if (! p->FE)
           break;
       }
     if (toffset == 64) // all FE==1
       {
         toffset = to_be_discarded_am (p->USE) << 4;
-        p = & cpu.PTWAM[toffset + setno];
+        p = & cpu_p->PTWAM[toffset + setno];
       }
 
     DBGAPP ("loadPTWAM(1):PTWAM[%d] FE=0 || LRU\n",
             toffset + setno);
 
     word6 u = calc_hit_am (p->USE, toffset >> 4); // before loading the PTWAM
-    * p = cpu.PTW0; // load the PTW
+    * p = cpu_p->PTW0; // load the PTW
     p->PAGENO = (offset >> 6) & 07760;
     p->POINTER = segno;
     p->FE = true;  // in use
-    cpu.PTW = p; // export pointer for appending
+    cpu_p->PTW = p; // export pointer for appending
 
     for (uint toffset1 = 0; toffset1 < 64; toffset1 += 16) // update LRU
       {
-        p = & cpu.PTWAM[toffset1 + setno];
+        p = & cpu_p->PTWAM[toffset1 + setno];
         if (p->FE) 
           p->USE = u;
       }
 
     DBGAPP ("loadPTWAM(2): ADDR 0%o U %o M %o F %o FC %o POINTER=%o "
             "PAGENO=%o USE=%d\n",
-            cpu.PTW->ADDR, cpu.PTW->U, cpu.PTW->M, cpu.PTW->DF, 
-            cpu.PTW->FC, cpu.PTW->POINTER, cpu.PTW->PAGENO, cpu.PTW->USE);
+            cpu_p->PTW->ADDR, cpu_p->PTW->U, cpu_p->PTW->M, cpu_p->PTW->DF, 
+            cpu_p->PTW->FC, cpu_p->PTW->POINTER, cpu_p->PTW->PAGENO, cpu_p->PTW->USE);
 #endif
 #endif // WAM
   }
@@ -1002,15 +1002,15 @@ static void loadPTWAM (word15 segno, word18 offset, UNUSED bool nomatch)
  * modify target segment PTW (Set M=1) ...
  */
 
-static void modify_ptw (sdw_s *sdw, word18 offset)
+static void modify_ptw (cpu_state_t *cpu_p, sdw_s *sdw, word18 offset)
   {
-    PNL (L68_ (cpu.apu.state |= apu_MPTW;))
+    PNL (L68_ (cpu_p->apu.state |= apu_MPTW;))
     //word24 y2 = offset % 1024;
     word24 x2 = offset / 1024; // floor
     
     word36 PTWx2;
     
-    set_apu_status (apuStatus_MPTW);
+    set_apu_status (cpu_p, apuStatus_MPTW);
 
 #ifdef TEST_OLIN
           cmpxchg ();
@@ -1024,13 +1024,13 @@ static void modify_ptw (sdw_s *sdw, word18 offset)
       lock_rmw ();
 #endif
 #ifdef LOCKLESS
-    core_read_lock ((sdw->ADDR + x2) & PAMASK, & PTWx2, __func__);
+    core_read_lock (cpu_p, (sdw->ADDR + x2) & PAMASK, & PTWx2, __func__);
     PTWx2 = SETBIT (PTWx2, 6);
-    core_write_unlock ((sdw->ADDR + x2) & PAMASK, PTWx2, __func__);
+    core_write_unlock (cpu_p, (sdw->ADDR + x2) & PAMASK, PTWx2, __func__);
 #else    
-    core_read ((sdw->ADDR + x2) & PAMASK, & PTWx2, __func__);
+    core_read (cpu_p, (sdw->ADDR + x2) & PAMASK, & PTWx2, __func__);
     PTWx2 = SETBIT (PTWx2, 6);
-    core_write ((sdw->ADDR + x2) & PAMASK, PTWx2, __func__);
+    core_write (cpu_p, (sdw->ADDR + x2) & PAMASK, PTWx2, __func__);
 #endif
 #ifdef TEST_FENCE
     fence ();
@@ -1039,17 +1039,17 @@ static void modify_ptw (sdw_s *sdw, word18 offset)
     if (! lck)
       unlock_rmw ();
 #endif
-    cpu.PTW->M = 1;
+    cpu_p->PTW->M = 1;
 #ifdef L68
-    if (cpu.MR_cache.emr && cpu.MR_cache.ihr)
-      addAPUhist (APUH_MPTW);
+    if (cpu_p->MR_cache.emr && cpu_p->MR_cache.ihr)
+      addAPUhist (cpu_p, APUH_MPTW);
 #endif
   }
 
-static void do_ptw2 (sdw_s *sdw, word18 offset)
+static void do_ptw2 (cpu_state_t *cpu_p, sdw_s *sdw, word18 offset)
   {
-    PNL (L68_ (cpu.apu.state |= apu_FPTW2;))
-    set_apu_status (apuStatus_PTW2);
+    PNL (L68_ (cpu_p->apu.state |= apu_FPTW2;))
+    set_apu_status (cpu_p, apuStatus_PTW2);
 
 #ifndef SPEED
     word24 y2 = offset % 1024;
@@ -1060,7 +1060,7 @@ static void do_ptw2 (sdw_s *sdw, word18 offset)
     
     DBGAPP ("%s address %08o\n", __func__, sdw->ADDR + x2 + 1);
 
-    core_read ((sdw->ADDR + x2 + 1) & PAMASK, & PTWx2n, __func__);
+    core_read (cpu_p, (sdw->ADDR + x2 + 1) & PAMASK, & PTWx2n, __func__);
 
     ptw_s PTW2; 
     PTW2.ADDR = GETHI (PTWx2n);
@@ -1070,7 +1070,7 @@ static void do_ptw2 (sdw_s *sdw, word18 offset)
     PTW2.FC = PTWx2n & 3;
     
 #ifdef L68
-    if (cpu.MR_cache.emr && cpu.MR_cache.ihr)
+    if (cpu_p->MR_cache.emr && cpu_p->MR_cache.ihr)
       addAPUhist (APUH_FPTW2);
 #endif
 
@@ -1081,7 +1081,7 @@ static void do_ptw2 (sdw_s *sdw, word18 offset)
 
     // check that PTW2 is the next page of the same segment
     // ISOLTS 875 02a
-    if ((PTW2.ADDR & 0777760) == (cpu.PTW->ADDR & 0777760) + 16)
+    if ((PTW2.ADDR & 0777760) == (cpu_p->PTW->ADDR & 0777760) + 16)
        //Is PTW2.F set ON?
        if (! PTW2.DF)
            // initiate a directed fault
@@ -1239,23 +1239,23 @@ static char *str_pct (processor_cycle_type t)
 
 // CANFAULT
 
-word24 do_append_cycle (processor_cycle_type thisCycle, word36 * data,
+word24 do_append_cycle (cpu_state_t *cpu_p, processor_cycle_type thisCycle, word36 * data,
                       uint nWords)
   {
-    DCDstruct * i = & cpu.currentInstruction;
+    DCDstruct * i = & cpu_p->currentInstruction;
     DBGAPP ("do_append_cycle(Entry) thisCycle=%s\n",
             str_pct (thisCycle));
     DBGAPP ("do_append_cycle(Entry) lastCycle=%s\n",
-            str_pct (cpu.apu.lastCycle));
+            str_pct (cpu_p->apu.lastCycle));
     DBGAPP ("do_append_cycle(Entry) CA %06o\n",
-            cpu.TPR.CA);
+            cpu_p->TPR.CA);
     DBGAPP ("do_append_cycle(Entry) n=%2u\n",
             nWords);
     DBGAPP ("do_append_cycle(Entry) PPR.PRR=%o PPR.PSR=%05o\n",
-            cpu.PPR.PRR, cpu.PPR.PSR);
+            cpu_p->PPR.PRR, cpu_p->PPR.PSR);
     DBGAPP ("do_append_cycle(Entry) TPR.TRR=%o TPR.TSR=%05o\n",
-            cpu.TPR.TRR, cpu.TPR.TSR);
-    //if (cpu.isb29)
+            cpu_p->TPR.TRR, cpu_p->TPR.TSR);
+    //if (cpu_p->isb29)
     if (i->b29)
       {
         DBGAPP ("do_append_cycle(Entry) isb29 PRNO %o\n",
@@ -1279,16 +1279,16 @@ word24 do_append_cycle (processor_cycle_type thisCycle, word36 * data,
                      ! i->opcodeX);
 #endif
 
-    processor_cycle_type lastCycle = cpu.apu.lastCycle;
-    cpu.apu.lastCycle = thisCycle;
+    processor_cycle_type lastCycle = cpu_p->apu.lastCycle;
+    cpu_p->apu.lastCycle = thisCycle;
 
-    DBGAPP ("do_append_cycle(Entry) XSF %o\n", cpu.cu.XSF);
+    DBGAPP ("do_append_cycle(Entry) XSF %o\n", cpu_p->cu.XSF);
 
-    PNL (L68_ (cpu.apu.state = 0;))
+    PNL (L68_ (cpu_p->apu.state = 0;))
 
-    cpu.RSDWH_R1 = 0;
+    cpu_p->RSDWH_R1 = 0;
     
-    cpu.acvFaults = 0;
+    cpu_p->acvFaults = 0;
 
 //#define FMSG(x) x
 #define FMSG(x) 
@@ -1324,64 +1324,64 @@ word24 do_append_cycle (processor_cycle_type thisCycle, word36 * data,
         lastCycle == OPERAND_READ)
       goto A;
 
-    if (lastCycle == INDIRECT_WORD_FETCH || cpu.cu.XSF)
+    if (lastCycle == INDIRECT_WORD_FETCH || cpu_p->cu.XSF)
       goto A;
 
     if (lastCycle == RTCD_OPERAND_FETCH)
       goto A;
 
     //if (lastCycle != INSTRUCTION_FETCH && i->a)
-    //if (lastCycle != INSTRUCTION_FETCH && cpu.cu.TSN_VALID[0])
+    //if (lastCycle != INSTRUCTION_FETCH && cpu_p->cu.TSN_VALID[0])
     //if (lastCycle != INSTRUCTION_FETCH)
     if (thisCycle != INSTRUCTION_FETCH)
       {
 #if 0
         for (uint tsn = 0; tsn < 3; tsn ++)
           {
-            if (cpu.cu.TSN_VALID[tsn])
+            if (cpu_p->cu.TSN_VALID[tsn])
               {
-                PNL (L68_ (cpu.apu.state |= apu_ESN_SNR;))
-                word3 n = cpu.cu.TSN_PRNO[tsn];
+                PNL (L68_ (cpu_p->apu.state |= apu_ESN_SNR;))
+                word3 n = cpu_p->cu.TSN_PRNO[tsn];
                 CPTUR (cptUsePRn + n);
-                if (cpu.PAR[n].RNR > cpu.PPR.PRR)
+                if (cpu_p->PAR[n].RNR > cpu_p->PPR.PRR)
                   {
-                    cpu.TPR.TRR = cpu.PAR[n].RNR;
+                    cpu_p->TPR.TRR = cpu_p->PAR[n].RNR;
                   }
                 else
                  {
-                    cpu.TPR.TRR = cpu.PPR.PRR;
+                    cpu_p->TPR.TRR = cpu_p->PPR.PRR;
                  }
-                cpu.TPR.TSR = cpu.PAR[n].SNR;
-                DBGAPP ("TSN TSR %05o TRR %o\n", cpu.TPR.TSR, cpu.TPR.TRR);
+                cpu_p->TPR.TSR = cpu_p->PAR[n].SNR;
+                DBGAPP ("TSN TSR %05o TRR %o\n", cpu_p->TPR.TSR, cpu_p->TPR.TRR);
                 goto A;
               }
           }
 #else
-        //if (cpu.isb29)
+        //if (cpu_p->isb29)
         if (i->b29)
           {
-            PNL (L68_ (cpu.apu.state |= apu_ESN_SNR;))
+            PNL (L68_ (cpu_p->apu.state |= apu_ESN_SNR;))
             n = GET_PRN(IWB_IRODD);
             CPTUR (cptUsePRn + n);
-            if (cpu.PAR[n].RNR > cpu.PPR.PRR)
+            if (cpu_p->PAR[n].RNR > cpu_p->PPR.PRR)
               {
-                cpu.TPR.TRR = cpu.PAR[n].RNR;
+                cpu_p->TPR.TRR = cpu_p->PAR[n].RNR;
               }
             else
              {
-                cpu.TPR.TRR = cpu.PPR.PRR;
+                cpu_p->TPR.TRR = cpu_p->PPR.PRR;
              }
-            cpu.TPR.TSR = cpu.PAR[n].SNR;
-            cpu.cu.XSF = 1;
+            cpu_p->TPR.TSR = cpu_p->PAR[n].SNR;
+            cpu_p->cu.XSF = 1;
 sim_debug (DBG_TRACEEXT, & cpu_dev, "do_append_cycle bit 29 sets XSF to 1\n");
-            DBGAPP ("TSN TSR %05o TRR %o\n", cpu.TPR.TSR, cpu.TPR.TRR);
+            DBGAPP ("TSN TSR %05o TRR %o\n", cpu_p->TPR.TSR, cpu_p->TPR.TRR);
             goto A;
           }
 #endif
       }
 
-    cpu.TPR.TRR = cpu.PPR.PRR;
-    cpu.TPR.TSR = cpu.PPR.PSR;
+    cpu_p->TPR.TRR = cpu_p->PPR.PRR;
+    cpu_p->TPR.TSR = cpu_p->PPR.PSR;
 
     // If the rtcd instruction is executed with the processor in absolute
     // mode with bit 29 of the instruction word set OFF and without
@@ -1397,13 +1397,13 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "do_append_cycle bit 29 sets XSF to 1\n");
     //   implying that control is always transferred into ring 0.
     //
     if (thisCycle == RTCD_OPERAND_FETCH &&
-        get_addr_mode() == ABSOLUTE_mode &&
-        ! cpu.cu.XSF /*get_went_appending()*/)
+        get_addr_mode(cpu_p) == ABSOLUTE_mode &&
+        ! cpu_p->cu.XSF /*get_went_appending()*/)
       { 
-        cpu.TPR.TSR = 0;
+        cpu_p->TPR.TSR = 0;
       }
 
-    DBGAPP ("set TSR %05o TRR %o\n", cpu.TPR.TSR, cpu.TPR.TRR);
+    DBGAPP ("set TSR %05o TRR %o\n", cpu_p->TPR.TSR, cpu_p->TPR.TRR);
     goto A;
 
 ////////////////////////////////////////
@@ -1418,93 +1418,93 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "do_append_cycle bit 29 sets XSF to 1\n");
 
 A:;
 
-    //PNL (cpu.APUMemAddr = address;)
-    PNL (cpu.APUMemAddr = cpu.TPR.CA;)
+    //PNL (cpu_p->APUMemAddr = address;)
+    PNL (cpu_p->APUMemAddr = cpu_p->TPR.CA;)
 
     DBGAPP ("do_append_cycle(A)\n");
     
 #ifndef WAM
-    if (cpu.DSBR.U == 0)
+    if (cpu_p->DSBR.U == 0)
       {
-        fetch_dsptw (cpu.TPR.TSR);
+        fetch_dsptw (cpu_p->TPR.TSR);
         
-        if (! cpu.PTW0.DF)
+        if (! cpu_p->PTW0.DF)
          {
-          doFault (FAULT_DF0 + cpu.PTW0.FC, fst_zero, 
+          doFault (FAULT_DF0 + cpu_p->PTW0.FC, fst_zero, 
                    "do_append_cycle(A): PTW0.F == 0");
          }
         
-        if (! cpu.PTW0.U)
+        if (! cpu_p->PTW0.U)
          {
-          modify_dsptw (cpu.TPR.TSR);
+          modify_dsptw (cpu_p->TPR.TSR);
           }
         
-        fetch_psdw (cpu.TPR.TSR);
+        fetch_psdw (cpu_p->TPR.TSR);
       }
     else
       {
-        fetch_nsdw (cpu.TPR.TSR); // load SDW0 from descriptor segment table.
+        fetch_nsdw (cpu_p->TPR.TSR); // load SDW0 from descriptor segment table.
       }
 
-    if (cpu.SDW0.DF == 0)
+    if (cpu_p->SDW0.DF == 0)
       {
         if (thisCycle != ABSA_CYCLE)
           {
             DBGAPP ("do_append_cycle(A): SDW0.F == 0! "
                     "Initiating directed fault\n");
             // initiate a directed fault ...
-            doFault (FAULT_DF0 + cpu.SDW0.FC, fst_zero, "SDW0.F == 0");
+            doFault (FAULT_DF0 + cpu_p->SDW0.FC, fst_zero, "SDW0.F == 0");
           }
       }
 
-    load_sdwam (cpu.TPR.TSR, true); // load SDW0 POINTER, always bypass SDWAM
+    load_sdwam (cpu_p->TPR.TSR, true); // load SDW0 POINTER, always bypass SDWAM
 #else
 
     // is SDW for C(TPR.TSR) in SDWAM?
-    if (nomatch || ! fetch_sdw_from_sdwam (cpu.TPR.TSR))
+    if (nomatch || ! fetch_sdw_from_sdwam (cpu_p, cpu_p->TPR.TSR))
       {
         // No
         DBGAPP ("do_append_cycle(A):SDW for segment %05o not in SDWAM\n",
-                 cpu.TPR.TSR);
+                 cpu_p->TPR.TSR);
         
         DBGAPP ("do_append_cycle(A):DSBR.U=%o\n",
-                cpu.DSBR.U);
+                cpu_p->DSBR.U);
         
-        if (cpu.DSBR.U == 0)
+        if (cpu_p->DSBR.U == 0)
           {
-            fetch_dsptw (cpu.TPR.TSR);
+            fetch_dsptw (cpu_p, cpu_p->TPR.TSR);
             
-            if (! cpu.PTW0.DF)
-              doFault (FAULT_DF0 + cpu.PTW0.FC, fst_zero,
+            if (! cpu_p->PTW0.DF)
+              doFault (FAULT_DF0 + cpu_p->PTW0.FC, fst_zero,
                        "do_append_cycle(A): PTW0.F == 0");
             
-            if (! cpu.PTW0.U)
-              modify_dsptw (cpu.TPR.TSR);
+            if (! cpu_p->PTW0.U)
+              modify_dsptw (cpu_p, cpu_p->TPR.TSR);
             
-            fetch_psdw (cpu.TPR.TSR);
+            fetch_psdw (cpu_p, cpu_p->TPR.TSR);
           }
         else
-          fetch_nsdw (cpu.TPR.TSR); // load SDW0 from descriptor segment table.
+          fetch_nsdw (cpu_p, cpu_p->TPR.TSR); // load SDW0 from descriptor segment table.
         
-        if (cpu.SDW0.DF == 0)
+        if (cpu_p->SDW0.DF == 0)
           {
             if (thisCycle != ABSA_CYCLE)
               {
                 DBGAPP ("do_append_cycle(A): SDW0.F == 0! "
                         "Initiating directed fault\n");
                 // initiate a directed fault ...
-                doFault (FAULT_DF0 + cpu.SDW0.FC, fst_zero, "SDW0.F == 0");
+                doFault (FAULT_DF0 + cpu_p->SDW0.FC, fst_zero, "SDW0.F == 0");
               }
           }
         // load SDWAM .....
-        load_sdwam (cpu.TPR.TSR, nomatch);
+        load_sdwam (cpu_p, cpu_p->TPR.TSR, nomatch);
       }
 #endif
     DBGAPP ("do_append_cycle(A) R1 %o R2 %o R3 %o E %o\n",
-            cpu.SDW->R1, cpu.SDW->R2, cpu.SDW->R3, cpu.SDW->E);
+            cpu_p->SDW->R1, cpu_p->SDW->R2, cpu_p->SDW->R3, cpu_p->SDW->E);
 
     // Yes...
-    cpu.RSDWH_R1 = cpu.SDW->R1;
+    cpu_p->RSDWH_R1 = cpu_p->SDW->R1;
 
 ////////////////////////////////////////
 //
@@ -1519,11 +1519,11 @@ A:;
     DBGAPP ("do_append_cycle(B)\n");
     
     //C(SDW.R1) <= C(SDW.R2) <= C(SDW .R3)?
-    if (! (cpu.SDW->R1 <= cpu.SDW->R2 && cpu.SDW->R2 <= cpu.SDW->R3))
+    if (! (cpu_p->SDW->R1 <= cpu_p->SDW->R2 && cpu_p->SDW->R2 <= cpu_p->SDW->R3))
       {
         // Set fault ACV0 = IRO
-        cpu.acvFaults |= ACV0;
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+        cpu_p->acvFaults |= ACV0;
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         FMSG (acvFaultsMsg = "acvFaults(B) C(SDW.R1) <= C(SDW.R2) <= "
                               "C(SDW .R3)";)
       }
@@ -1567,26 +1567,26 @@ A:;
         
         // No
         // C(TPR.TRR) > C(SDW .R2)?
-        if (cpu.TPR.TRR > cpu.SDW->R2)
+        if (cpu_p->TPR.TRR > cpu_p->SDW->R2)
           {
             DBGAPP ("ACV3\n");
             DBGAPP ("do_append_cycle(B) ACV3\n");
             //Set fault ACV3 = ORB
-            cpu.acvFaults |= ACV3;
-            PNL (L68_ (cpu.apu.state |= apu_FLT;))
+            cpu_p->acvFaults |= ACV3;
+            PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
             FMSG (acvFaultsMsg = "acvFaults(B) C(TPR.TRR) > C(SDW .R2)";)
           }
         
-        if (cpu.SDW->R == 0)
+        if (cpu_p->SDW->R == 0)
           {
             //C(PPR.PSR) = C(TPR.TSR)?
-            if (cpu.PPR.PSR != cpu.TPR.TSR)
+            if (cpu_p->PPR.PSR != cpu_p->TPR.TSR)
               {
                 DBGAPP ("ACV4\n");
                 DBGAPP ("do_append_cycle(B) ACV4\n");
                 //Set fault ACV4 = R-OFF
-                cpu.acvFaults |= ACV4;
-                PNL (L68_ (cpu.apu.state |= apu_FLT;))
+                cpu_p->acvFaults |= ACV4;
+                PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
                 FMSG (acvFaultsMsg = "acvFaults(B) C(PPR.PSR) = C(TPR.TSR)";)
               }
           }
@@ -1601,22 +1601,22 @@ A:;
         DBGAPP ("do_append_cycle(B):STR-OP\n");
         
         // C(TPR.TRR) > C(SDW .R1)? Note typo in AL39, R2 should be R1
-        if (cpu.TPR.TRR > cpu.SDW->R1)
+        if (cpu_p->TPR.TRR > cpu_p->SDW->R1)
           {
             DBGAPP ("ACV5 TRR %o R1 %o\n",
-                    cpu.TPR.TRR, cpu.SDW->R1);
+                    cpu_p->TPR.TRR, cpu_p->SDW->R1);
             //Set fault ACV5 = OWB
-            cpu.acvFaults |= ACV5;
-            PNL (L68_ (cpu.apu.state |= apu_FLT;))
+            cpu_p->acvFaults |= ACV5;
+            PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
             FMSG (acvFaultsMsg = "acvFaults(B) C(TPR.TRR) > C(SDW .R1)";)
           }
         
-        if (! cpu.SDW->W)
+        if (! cpu_p->SDW->W)
           {
             DBGAPP ("ACV6\n");
             // Set fault ACV6 = W-OFF
-            cpu.acvFaults |= ACV6;
-            PNL (L68_ (cpu.apu.state |= apu_FLT;))
+            cpu_p->acvFaults |= ACV6;
+            PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
             FMSG (acvFaultsMsg = "acvFaults(B) ACV6 = W-OFF";)
           }
         
@@ -1634,34 +1634,34 @@ C:;
     // (rtcd operand)
     // C(TPR.TRR) < C(SDW.R1)?
     // C(TPR.TRR) > C(SDW.R2)?
-    if (cpu.TPR.TRR < cpu.SDW->R1 ||
-        cpu.TPR.TRR > cpu.SDW->R2)
+    if (cpu_p->TPR.TRR < cpu_p->SDW->R1 ||
+        cpu_p->TPR.TRR > cpu_p->SDW->R2)
       {
         DBGAPP ("ACV1 c\n");
         DBGAPP ("do_append_cycle(C) ACV1\n");
         //Set fault ACV1 = OEB
-        cpu.acvFaults |= ACV1;
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+        cpu_p->acvFaults |= ACV1;
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         FMSG (acvFaultsMsg = "acvFaults(C) C(SDW.R1 > C(TPR.TRR) > C(SDW.R2)";)
       }
     // SDW.E set ON?
-    if (! cpu.SDW->E)
+    if (! cpu_p->SDW->E)
       {
         DBGAPP ("ACV2 a\n");
         DBGAPP ("do_append_cycle(C) ACV2\n");
         //Set fault ACV2 = E-OFF
-        cpu.acvFaults |= ACV2;
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+        cpu_p->acvFaults |= ACV2;
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         FMSG (acvFaultsMsg = "acvFaults(C) SDW.E";)
       }
     // C(TPR.TRR) >= C(PPR.PRR)
-    if (cpu.TPR.TRR < cpu.PPR.PRR)
+    if (cpu_p->TPR.TRR < cpu_p->PPR.PRR)
       {
         DBGAPP ("ACV11\n");
         DBGAPP ("do_append_cycle(C) ACV11\n");
         //Set fault ACV11 = INRET
-        cpu.acvFaults |= ACV11;
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+        cpu_p->acvFaults |= ACV11;
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         FMSG (acvFaultsMsg = "acvFaults(C) TRR>=PRR";)
       }
 
@@ -1670,17 +1670,17 @@ D:;
     
     // transfer or instruction fetch
 
-    if (cpu.rRALR == 0)
+    if (cpu_p->rRALR == 0)
         goto G;
     
     // C(PPR.PRR) < RALR?
-    if (! (cpu.PPR.PRR < cpu.rRALR))
+    if (! (cpu_p->PPR.PRR < cpu_p->rRALR))
       {
         DBGAPP ("ACV13\n");
         DBGAPP ("acvFaults(D) C(PPR.PRR) %o < RALR %o\n", 
-                cpu.PPR.PRR, cpu.rRALR);
-        cpu.acvFaults |= ACV13;
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+                cpu_p->PPR.PRR, cpu_p->rRALR);
+        cpu_p->acvFaults |= ACV13;
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         FMSG (acvFaultsMsg = "acvFaults(D) C(PPR.PRR) < RALR";)
       }
     
@@ -1701,39 +1701,39 @@ E:;
     DBGAPP ("do_append_cycle(E): CALL6\n");
     DBGAPP ("do_append_cycle(E): E %o G %o PSR %05o TSR %05o CA %06o "
             "EB %06o R %o%o%o TRR %o PRR %o\n",
-            cpu.SDW->E, cpu.SDW->G, cpu.PPR.PSR, cpu.TPR.TSR, cpu.TPR.CA,
-            cpu.SDW->EB, cpu.SDW->R1, cpu.SDW->R2, cpu.SDW->R3,
-            cpu.TPR.TRR, cpu.PPR.PRR);
+            cpu_p->SDW->E, cpu_p->SDW->G, cpu_p->PPR.PSR, cpu_p->TPR.TSR, cpu_p->TPR.CA,
+            cpu_p->SDW->EB, cpu_p->SDW->R1, cpu_p->SDW->R2, cpu_p->SDW->R3,
+            cpu_p->TPR.TRR, cpu_p->PPR.PRR);
 
     //SDW.E set ON?
-    if (! cpu.SDW->E)
+    if (! cpu_p->SDW->E)
       {
         DBGAPP ("ACV2 b\n");
         DBGAPP ("do_append_cycle(E) ACV2\n");
         // Set fault ACV2 = E-OFF
-        cpu.acvFaults |= ACV2;
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+        cpu_p->acvFaults |= ACV2;
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         FMSG (acvFaultsMsg = "acvFaults(E) SDW .E set OFF";)
       }
     
     //SDW .G set ON?
-    if (cpu.SDW->G)
+    if (cpu_p->SDW->G)
       goto E1;
     
     // C(PPR.PSR) = C(TPR.TSR)?
-    if (cpu.PPR.PSR == cpu.TPR.TSR && ! TST_I_ABS)
+    if (cpu_p->PPR.PSR == cpu_p->TPR.TSR && ! TST_I_ABS)
       goto E1;
     
     // XXX This doesn't seem right
 // EB is word 15; masking address makes no sense; rather 0-extend EB
 // Fixes ISOLTS 880-01
-    if (cpu.TPR.CA >= (word18) cpu.SDW->EB)
+    if (cpu_p->TPR.CA >= (word18) cpu_p->SDW->EB)
       {
         DBGAPP ("ACV7\n");
         DBGAPP ("do_append_cycle(E) ACV7\n");
         // Set fault ACV7 = NO GA
-        cpu.acvFaults |= ACV7;
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+        cpu_p->acvFaults |= ACV7;
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         FMSG (acvFaultsMsg = "acvFaults(E) TPR.CA4-17 >= SDW.CL";)
       }
     
@@ -1741,39 +1741,39 @@ E1:
     DBGAPP ("do_append_cycle(E1): CALL6 (cont'd)\n");
 
     // C(TPR.TRR) > SDW.R3?
-    if (cpu.TPR.TRR > cpu.SDW->R3)
+    if (cpu_p->TPR.TRR > cpu_p->SDW->R3)
       {
         DBGAPP ("ACV8\n");
         DBGAPP ("do_append_cycle(E) ACV8\n");
         //Set fault ACV8 = OCB
-        cpu.acvFaults |= ACV8;
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+        cpu_p->acvFaults |= ACV8;
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         FMSG (acvFaultsMsg = "acvFaults(E1) C(TPR.TRR) > SDW.R3";)
       }
     
     // C(TPR.TRR) < SDW.R1?
-    if (cpu.TPR.TRR < cpu.SDW->R1)
+    if (cpu_p->TPR.TRR < cpu_p->SDW->R1)
       {
         DBGAPP ("ACV9\n");
         DBGAPP ("do_append_cycle(E) ACV9\n");
         // Set fault ACV9 = OCALL
-        cpu.acvFaults |= ACV9;
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+        cpu_p->acvFaults |= ACV9;
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         FMSG (acvFaultsMsg = "acvFaults(E1) C(TPR.TRR) < SDW.R1";)
       }
     
     
     // C(TPR.TRR) > C(PPR.PRR)?
-    if (cpu.TPR.TRR > cpu.PPR.PRR)
+    if (cpu_p->TPR.TRR > cpu_p->PPR.PRR)
       {
         // C(PPR.PRR) < SDW.R2?
-        if (cpu.PPR.PRR < cpu.SDW->R2)
+        if (cpu_p->PPR.PRR < cpu_p->SDW->R2)
           {
             DBGAPP ("ACV10\n");
             DBGAPP ("do_append_cycle(E) ACV10\n");
             // Set fault ACV10 = BOC
-            cpu.acvFaults |= ACV10;
-            PNL (L68_ (cpu.apu.state |= apu_FLT;))
+            cpu_p->acvFaults |= ACV10;
+            PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
             FMSG (acvFaultsMsg = "acvFaults(E1) C(TPR.TRR) > C(PPR.PRR) && "
                   "C(PPR.PRR) < SDW.R2";)
           }
@@ -1781,16 +1781,16 @@ E1:
 
     
     DBGAPP ("do_append_cycle(E1): CALL6 TPR.TRR %o SDW->R2 %o\n",
-            cpu.TPR.TRR, cpu.SDW->R2);
+            cpu_p->TPR.TRR, cpu_p->SDW->R2);
 
     // C(TPR.TRR) > SDW.R2?
-    if (cpu.TPR.TRR > cpu.SDW->R2)
+    if (cpu_p->TPR.TRR > cpu_p->SDW->R2)
       {
         // SDW.R2 -> C(TPR.TRR)
-        cpu.TPR.TRR = cpu.SDW->R2;
+        cpu_p->TPR.TRR = cpu_p->SDW->R2;
       }
 
-    DBGAPP ("do_append_cycle(E1): CALL6 TPR.TRR %o\n", cpu.TPR.TRR);
+    DBGAPP ("do_append_cycle(E1): CALL6 TPR.TRR %o\n", cpu_p->TPR.TRR);
     
     goto G;
     
@@ -1801,49 +1801,49 @@ E1:
 ////////////////////////////////////////
 
 F:;
-    PNL (L68_ (cpu.apu.state |= apu_PIAU;))
+    PNL (L68_ (cpu_p->apu.state |= apu_PIAU;))
     DBGAPP ("do_append_cycle(F): transfer or instruction fetch\n");
 
     // C(TPR.TRR) < C(SDW .R1)?
-    if (cpu.TPR.TRR < cpu.SDW->R1)
+    if (cpu_p->TPR.TRR < cpu_p->SDW->R1)
       {
         DBGAPP ("ACV1 a\n");
         DBGAPP ("acvFaults(F) C(TPR.TRR) %o < C(SDW .R1) %o\n",
-                   cpu.TPR.TRR, cpu.SDW->R1);
-        cpu.acvFaults |= ACV1;
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+                   cpu_p->TPR.TRR, cpu_p->SDW->R1);
+        cpu_p->acvFaults |= ACV1;
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         FMSG (acvFaultsMsg = "acvFaults(F) C(TPR.TRR) < C(SDW .R1)";)
       }
     
     // C(TPR.TRR) > C(SDW .R2)?
-    if (cpu.TPR.TRR > cpu.SDW->R2)
+    if (cpu_p->TPR.TRR > cpu_p->SDW->R2)
       {
         DBGAPP ("ACV1 b\n");
         DBGAPP ("acvFaults(F) C(TPR.TRR) %o > C(SDW .R2) %o\n",
-                   cpu.TPR.TRR, cpu.SDW->R2);
-        cpu.acvFaults |= ACV1;
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+                   cpu_p->TPR.TRR, cpu_p->SDW->R2);
+        cpu_p->acvFaults |= ACV1;
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         FMSG (acvFaultsMsg = "acvFaults(F) C(TPR.TRR) > C(SDW .R2)";)
       }
     
     // SDW .E set ON?
-    if (! cpu.SDW->E)
+    if (! cpu_p->SDW->E)
       {
         DBGAPP ("ACV2 c \n");
         DBGAPP ("do_append_cycle(F) ACV2\n");
-        cpu.acvFaults |= ACV2;
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+        cpu_p->acvFaults |= ACV2;
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         FMSG (acvFaultsMsg = "acvFaults(F) SDW .E set OFF";)
       }
     
     // C(PPR.PRR) = C(TPR.TRR)?
-    if (cpu.PPR.PRR != cpu.TPR.TRR)
+    if (cpu_p->PPR.PRR != cpu_p->TPR.TRR)
       {
         DBGAPP ("ACV12\n");
         DBGAPP ("do_append_cycle(F) ACV12\n");
         //Set fault ACV12 = CRT
-        cpu.acvFaults |= ACV12;
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+        cpu_p->acvFaults |= ACV12;
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         FMSG (acvFaultsMsg = "acvFaults(F) C(PPR.PRR) != C(TPR.TRR)";)
       }
     
@@ -1860,65 +1860,65 @@ G:;
     DBGAPP ("do_append_cycle(G)\n");
     
     //C(TPR.CA)0,13 > SDW.BOUND?
-    if (((cpu.TPR.CA >> 4) & 037777) > cpu.SDW->BOUND)
+    if (((cpu_p->TPR.CA >> 4) & 037777) > cpu_p->SDW->BOUND)
       {
         DBGAPP ("ACV15\n");
         DBGAPP ("do_append_cycle(G) ACV15\n");
-        cpu.acvFaults |= ACV15;
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+        cpu_p->acvFaults |= ACV15;
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         FMSG (acvFaultsMsg = "acvFaults(G) C(TPR.CA)0,13 > SDW.BOUND";)
         DBGAPP ("acvFaults(G) C(TPR.CA)0,13 > SDW.BOUND\n"
                 "   CA %06o CA>>4 & 037777 %06o SDW->BOUND %06o",
-                cpu.TPR.CA, ((cpu.TPR.CA >> 4) & 037777), cpu.SDW->BOUND);
+                cpu_p->TPR.CA, ((cpu_p->TPR.CA >> 4) & 037777), cpu_p->SDW->BOUND);
       }
     
-    if (cpu.acvFaults)
+    if (cpu_p->acvFaults)
       {
         DBGAPP ("do_append_cycle(G) acvFaults\n");
-        PNL (L68_ (cpu.apu.state |= apu_FLT;))
+        PNL (L68_ (cpu_p->apu.state |= apu_FLT;))
         // Initiate an access violation fault
-        doFault (FAULT_ACV, (_fault_subtype) {.fault_acv_subtype=cpu.acvFaults},
+        doFault (FAULT_ACV, (_fault_subtype) {.fault_acv_subtype=cpu_p->acvFaults},
                  "ACV fault");
       }
 
     // is segment C(TPR.TSR) paged?
-    if (cpu.SDW->U)
+    if (cpu_p->SDW->U)
       goto H; // Not paged
     
     // Yes. segment is paged ...
     // is PTW for C(TPR.CA) in PTWAM?
     
-    DBGAPP ("do_append_cycle(G) CA %06o\n", cpu.TPR.CA);
+    DBGAPP ("do_append_cycle(G) CA %06o\n", cpu_p->TPR.CA);
 #ifndef WAM
-    fetch_ptw (cpu.SDW, cpu.TPR.CA);
-    if (! cpu.PTW0.DF)
+    fetch_ptw (cpu_p->SDW, cpu_p->TPR.CA);
+    if (! cpu_p->PTW0.DF)
       {
-        // cpu.TPR.CA = address;
+        // cpu_p->TPR.CA = address;
         if (thisCycle != ABSA_CYCLE)
           {
             // initiate a directed fault
-            doFault (FAULT_DF0 + cpu.PTW0.FC, fst_zero, "PTW0.F == 0");
+            doFault (FAULT_DF0 + cpu_p->PTW0.FC, fst_zero, "PTW0.F == 0");
           }
       } 
     // load PTW0 POINTER, always bypass PTWAM
-    loadPTWAM (cpu.SDW->POINTER, cpu.TPR.CA, true);
+    loadPTWAM (cpu_p->SDW->POINTER, cpu_p->TPR.CA, true);
 
 #else
     if (nomatch ||
-        ! fetch_ptw_from_ptwam (cpu.SDW->POINTER, cpu.TPR.CA))  //TPR.CA))
+        ! fetch_ptw_from_ptwam (cpu_p, cpu_p->SDW->POINTER, cpu_p->TPR.CA))  //TPR.CA))
       {
-        fetch_ptw (cpu.SDW, cpu.TPR.CA);
-        if (! cpu.PTW0.DF)
+        fetch_ptw (cpu_p, cpu_p->SDW, cpu_p->TPR.CA);
+        if (! cpu_p->PTW0.DF)
           {
-            // cpu.TPR.CA = address;
+            // cpu_p->TPR.CA = address;
             if (thisCycle != ABSA_CYCLE)
               {
                 // initiate a directed fault
-                doFault (FAULT_DF0 + cpu.PTW0.FC, (_fault_subtype) {.bits=0},
+                doFault (FAULT_DF0 + cpu_p->PTW0.FC, (_fault_subtype) {.bits=0},
                          "PTW0.F == 0");
               }
           }
-        loadPTWAM (cpu.SDW->POINTER, cpu.TPR.CA, nomatch); // load PTW0 to PTWAM
+        loadPTWAM (cpu_p, cpu_p->SDW->POINTER, cpu_p->TPR.CA, nomatch); // load PTW0 to PTWAM
       }
 #endif
     
@@ -1930,7 +1930,7 @@ G:;
     if (i->opcodeX && ((i->opcode & 0770)== 0200|| (i->opcode & 0770) == 0220
         || (i->opcode & 0770)== 020|| (i->opcode & 0770) == 0300))
       {
-        do_ptw2 (cpu.SDW, cpu.TPR.CA);
+        do_ptw2 (cpu_p, cpu_p->SDW, cpu_p->TPR.CA);
       } 
     goto I;
     
@@ -1943,7 +1943,7 @@ G:;
 H:;
     DBGAPP ("do_append_cycle(H): FANP\n");
 
-    PNL (L68_ (cpu.apu.state |= apu_FANP;))
+    PNL (L68_ (cpu_p->apu.state |= apu_FANP;))
 #if 0
     // ISOLTS pa865 test-01a 101232
     if (get_bar_mode ())
@@ -1953,26 +1953,26 @@ H:;
     else
       ....
 #endif
-    set_apu_status (apuStatus_FANP);
+    set_apu_status (cpu_p, apuStatus_FANP);
 
     DBGAPP ("do_append_cycle(H): SDW->ADDR=%08o CA=%06o \n",
-            cpu.SDW->ADDR, cpu.TPR.CA);
+            cpu_p->SDW->ADDR, cpu_p->TPR.CA);
 
     if (thisCycle == RTCD_OPERAND_FETCH &&
-        get_addr_mode () == ABSOLUTE_mode &&
-        ! cpu.cu.XSF /*get_went_appending ()*/)
+        get_addr_mode (cpu_p) == ABSOLUTE_mode &&
+        ! cpu_p->cu.XSF /*get_went_appending ()*/)
       { 
-        finalAddress = cpu.TPR.CA;
+        finalAddress = cpu_p->TPR.CA;
       }
     else
       {
-        finalAddress = (cpu.SDW->ADDR & 077777760) + cpu.TPR.CA;
+        finalAddress = (cpu_p->SDW->ADDR & 077777760) + cpu_p->TPR.CA;
         finalAddress &= 0xffffff;
       }
-    PNL (cpu.APUMemAddr = finalAddress;)
+    PNL (cpu_p->APUMemAddr = finalAddress;)
     
     DBGAPP ("do_append_cycle(H:FANP): (%05o:%06o) finalAddress=%08o\n",
-            cpu.TPR.TSR, cpu.TPR.CA, finalAddress);
+            cpu_p->TPR.TSR, cpu_p->TPR.CA, finalAddress);
     
     //if (thisCycle == ABSA_CYCLE)
     //    goto J;
@@ -1986,32 +1986,32 @@ I:;
 #ifdef LOCKLESS
     if ((StrOp ||
         thisCycle == OPERAND_RMW ||
-        thisCycle == APU_DATA_RMW) && cpu.PTW->M == 0)  // is this the right way to do this?
+        thisCycle == APU_DATA_RMW) && cpu_p->PTW->M == 0)  // is this the right way to do this?
 #else
-    if (StrOp && cpu.PTW->M == 0)  // is this the right way to do this?
+    if (StrOp && cpu_p->PTW->M == 0)  // is this the right way to do this?
 #endif
       {
-       modify_ptw (cpu.SDW, cpu.TPR.CA);
+       modify_ptw (cpu_p, cpu_p->SDW, cpu_p->TPR.CA);
       }
     
     // final address paged
-    set_apu_status (apuStatus_FAP);
-    PNL (L68_ (cpu.apu.state |= apu_FAP;))
+    set_apu_status (cpu_p, apuStatus_FAP);
+    PNL (L68_ (cpu_p->apu.state |= apu_FAP;))
     
-    word24 y2 = cpu.TPR.CA % 1024;
+    word24 y2 = cpu_p->TPR.CA % 1024;
     
     // AL39: The hardware ignores low order bits of the main memory page
     // address according to page size    
-    finalAddress = (((word24)cpu.PTW->ADDR & 0777760) << 6) + y2; 
+    finalAddress = (((word24)cpu_p->PTW->ADDR & 0777760) << 6) + y2; 
     finalAddress &= 0xffffff;
-    PNL (cpu.APUMemAddr = finalAddress;)
+    PNL (cpu_p->APUMemAddr = finalAddress;)
     
 #ifdef L68
-    if (cpu.MR_cache.emr && cpu.MR_cache.ihr)
+    if (cpu_p->MR_cache.emr && cpu_p->MR_cache.ihr)
       addAPUhist (APUH_FAP);
 #endif
     DBGAPP ("do_append_cycle(H:FAP): (%05o:%06o) finalAddress=%08o\n",
-            cpu.TPR.TSR, cpu.TPR.CA, finalAddress);
+            cpu_p->TPR.TSR, cpu_p->TPR.CA, finalAddress);
 
     //if (thisCycle == ABSA_CYCLE)
     //    goto J;
@@ -2020,29 +2020,29 @@ I:;
 HI:
     DBGAPP ("do_append_cycle(HI)\n");
 
-    if (thisCycle == OPERAND_STORE && cpu.useZone)
+    if (thisCycle == OPERAND_STORE && cpu_p->useZone)
       {
-        core_write_zone (finalAddress, * data, str_pct (thisCycle));
+        core_write_zone (cpu_p, finalAddress, * data, str_pct (thisCycle));
       }
     else if (StrOp)
       {
-        core_writeN (finalAddress, data, nWords, str_pct (thisCycle));
+        core_writeN (cpu_p, finalAddress, data, nWords, str_pct (thisCycle));
       }
     else
       {
 #ifdef LOCKLESS
 	if ((thisCycle == OPERAND_RMW || thisCycle == APU_DATA_RMW) && nWords == 1)
 	  {
-	    core_read_lock (finalAddress, data, str_pct (thisCycle));
+	    core_read_lock (cpu_p, finalAddress, data, str_pct (thisCycle));
 	  }
 	else
 	  {
 	    if (thisCycle == OPERAND_RMW || thisCycle == APU_DATA_RMW)
 	      sim_warn("do_append_cycle: RMW nWords %d !=1\n", nWords);
-	    core_readN (finalAddress, data, nWords, str_pct (thisCycle));
+	    core_readN (cpu_p, finalAddress, data, nWords, str_pct (thisCycle));
 	  }
 #else
-        core_readN (finalAddress, data, nWords, str_pct (thisCycle));
+        core_readN (cpu_p, finalAddress, data, nWords, str_pct (thisCycle));
 #endif
       }
 
@@ -2081,7 +2081,7 @@ J:;
     // ri or ir & TPC.CA even?
     word6 tag = GET_TAG (IWB_IRODD);
     if ((GET_TM (tag) == TM_IR || GET_TM (tag) == TM_RI) &&
-        (cpu.TPR.CA & 1) == 0)
+        (cpu_p->TPR.CA & 1) == 0)
       {
         if (ISITS (* data))
           goto O;
@@ -2128,10 +2128,10 @@ J:;
         // C(Y)0,17 -> C(IWB)0,17
         // C(Y)30,35 -> C(IWB)30,35
         // 0 -> C(IWB)29
-        updateIWB (GET_OFFSET (* data), (* data) & MASK6);
+        updateIWB (cpu_p, GET_OFFSET (* data), (* data) & MASK6);
 
-        cpu.cu.TSN_PRNO[0] = n;
-        cpu.cu.TSN_VALID[0] = 1;
+        cpu_p->cu.TSN_PRNO[0] = n;
+        cpu_p->cu.TSN_VALID[0] = 1;
 
       }
 
@@ -2150,16 +2150,16 @@ K:; // RTCD operand fetch
 
     // C(Y-pair)3,17 -> C(PPR.PSR)
     // We set TSR here; TSR will be copied to PSR at KL
-    cpu.TPR.TSR = GETHI (* data) & MASK15;
+    cpu_p->TPR.TSR = GETHI (* data) & MASK15;
 
     // Maximum of
     // C(Y-pair)18,20; C(TPR.TRR); C(SDW.R1) -> C(PPR.PRR)
     // We set TRR here as well
-    cpu.PPR.PRR = cpu.TPR.TRR = max3 (y, cpu.TPR.TRR, cpu.RSDWH_R1);
+    cpu_p->PPR.PRR = cpu_p->TPR.TRR = max3 (y, cpu_p->TPR.TRR, cpu_p->RSDWH_R1);
 
     // C(Y-pair)36,53 -> C(PPR.IC)
     // We set CA here; copied to IC  at KL
-    cpu.TPR.CA = GETHI (* (data + 1));
+    cpu_p->TPR.CA = GETHI (* (data + 1));
 
     // If C(PPR.PRR) = 0 then C(SDW.P) -> C(PPR.P);
     //     otherwise 0 -> C(PPR.P)
@@ -2184,12 +2184,12 @@ L:; // Transfer or instruction fetch
         // C(PPR.PSR) -> C(PRn .SNR)
         // C(PPR.IC) -> C(PRn .WORDNO)
         // 000000 -> C(PRn .BITNO)
-        cpu.PR[n].RNR = cpu.PPR.PRR;
+        cpu_p->PR[n].RNR = cpu_p->PPR.PRR;
 // According the AL39, the PSR is 'undefined' in absolute mode.
 // ISOLTS thinks means don't change the operand
-        if (get_addr_mode () == APPEND_mode)
-          cpu.PR[n].SNR = cpu.PPR.PSR;
-        cpu.PR[n].WORDNO = (cpu.PPR.IC + 1) & MASK18;
+        if (get_addr_mode (cpu_p) == APPEND_mode)
+          cpu_p->PR[n].SNR = cpu_p->PPR.PSR;
+        cpu_p->PR[n].WORDNO = (cpu_p->PPR.IC + 1) & MASK18;
         SET_PR_BITNO (n, 0);
         HDBGRegPR (n);
       }
@@ -2207,14 +2207,14 @@ L:; // Transfer or instruction fetch
         CPTUR (cptUsePRn + 5);
         CPTUR (cptUsePRn + 6);
         CPTUR (cptUsePRn + 7);
-        cpu.PR[0].RNR =
-        cpu.PR[1].RNR =
-        cpu.PR[2].RNR =
-        cpu.PR[3].RNR =
-        cpu.PR[4].RNR =
-        cpu.PR[5].RNR =
-        cpu.PR[6].RNR =
-        cpu.PR[7].RNR = cpu.TPR.TRR;
+        cpu_p->PR[0].RNR =
+        cpu_p->PR[1].RNR =
+        cpu_p->PR[2].RNR =
+        cpu_p->PR[3].RNR =
+        cpu_p->PR[4].RNR =
+        cpu_p->PR[5].RNR =
+        cpu_p->PR[6].RNR =
+        cpu_p->PR[7].RNR = cpu_p->TPR.TRR;
         HDBGRegPR (0);
         HDBGRegPR (1);
         HDBGRegPR (2);
@@ -2230,9 +2230,9 @@ KL:
     DBGAPP ("do_append_cycle(KL)\n");
 
     // C(TPR.TSR) -> C(PPR.PSR)
-    cpu.PPR.PSR = cpu.TPR.TSR;
+    cpu_p->PPR.PSR = cpu_p->TPR.TSR;
     // C(TPR.CA) -> C(PPR.IC) 
-    cpu.PPR.IC = cpu.TPR.CA;
+    cpu_p->PPR.IC = cpu_p->TPR.CA;
 
     goto M;
 
@@ -2240,15 +2240,15 @@ M: // Set P
     DBGAPP ("do_append_cycle(M)\n");
 
     // C(TPR.TRR) = 0?
-    if (cpu.TPR.TRR == 0)
+    if (cpu_p->TPR.TRR == 0)
       {
         // C(SDW.P) -> C(PPR.P) 
-        cpu.PPR.P = cpu.SDW->P;
+        cpu_p->PPR.P = cpu_p->SDW->P;
       }
     else
       {
         // 0 C(PPR.P)
-        cpu.PPR.P = 0;
+        cpu_p->PPR.P = 0;
       }
 
     goto Exit; 
@@ -2257,34 +2257,34 @@ N: // CALL6
     DBGAPP ("do_append_cycle(N)\n");
 
     // C(TPR.TRR) = C(PPR.PRR)?
-    if (cpu.TPR.TRR == cpu.PPR.PRR)
+    if (cpu_p->TPR.TRR == cpu_p->PPR.PRR)
       {
         // C(PR6.SNR) -> C(PR7.SNR) 
-        cpu.PR[7].SNR = cpu.PR[6].SNR;
-        DBGAPP ("do_append_cycle(N) PR7.SNR = PR6.SNR %05o\n", cpu.PR[7].SNR);
+        cpu_p->PR[7].SNR = cpu_p->PR[6].SNR;
+        DBGAPP ("do_append_cycle(N) PR7.SNR = PR6.SNR %05o\n", cpu_p->PR[7].SNR);
       }
     else
       {
         // C(DSBR.STACK) || C(TPR.TRR) -> C(PR7.SNR)
-        cpu.PR[7].SNR = ((word15) (cpu.DSBR.STACK << 3)) | cpu.TPR.TRR;
+        cpu_p->PR[7].SNR = ((word15) (cpu_p->DSBR.STACK << 3)) | cpu_p->TPR.TRR;
         DBGAPP ("do_append_cycle(N) STACK %05o TRR %o\n",
-                cpu.DSBR.STACK, cpu.TPR.TRR);
-        DBGAPP ("do_append_cycle(N) PR7.SNR = STACK||TRR  %05o\n", cpu.PR[7].SNR);
+                cpu_p->DSBR.STACK, cpu_p->TPR.TRR);
+        DBGAPP ("do_append_cycle(N) PR7.SNR = STACK||TRR  %05o\n", cpu_p->PR[7].SNR);
       }
 
     // C(TPR.TRR) -> C(PR7.RNR)
-    cpu.PR[7].RNR = cpu.TPR.TRR;
+    cpu_p->PR[7].RNR = cpu_p->TPR.TRR;
     // 00...0 -> C(PR7.WORDNO)
-    cpu.PR[7].WORDNO = 0;
+    cpu_p->PR[7].WORDNO = 0;
     // 000000 -> C(PR7.BITNO)
     SET_PR_BITNO (7, 0);
     HDBGRegPR (7);
     // C(TPR.TRR) -> C(PPR.PRR)
-    cpu.PPR.PRR = cpu.TPR.TRR;
+    cpu_p->PPR.PRR = cpu_p->TPR.TRR;
     // C(TPR.TSR) -> C(PPR.PSR)
-    cpu.PPR.PSR = cpu.TPR.TSR;
+    cpu_p->PPR.PSR = cpu_p->TPR.TSR;
     // C(TPR.CA) -> C(PPR.IC)
-    cpu.PPR.IC = cpu.TPR.CA;
+    cpu_p->PPR.IC = cpu_p->TPR.CA;
 
     goto M;
 
@@ -2297,33 +2297,33 @@ N: // CALL6
 O:; // ITS, RTCD
     DBGAPP ("do_append_cycle(O)\n");
     DBGAPP ("do_append_cycle(O) TRR %o RSDWH.R1 %o ITS.RNR %o\n",
-            cpu.TPR.TRR, cpu.RSDWH_R1,
+            cpu_p->TPR.TRR, cpu_p->RSDWH_R1,
             (word3) (((* data) >> (18 - 3)) & MASK3));
 
     // C(TPR.TRR) >= RSDWH.R1?
-    if (cpu.TPR.TRR >= cpu.RSDWH_R1)
+    if (cpu_p->TPR.TRR >= cpu_p->RSDWH_R1)
       {
         // C(TPR.TRR) >= C(Y)18,20?
-        if (cpu.TPR.TRR >= (((* data) >> (18 - 3)) & MASK3))
+        if (cpu_p->TPR.TRR >= (((* data) >> (18 - 3)) & MASK3))
           goto Exit;
         // C(Y)18,20 -> C(TPR.TRR)
-        cpu.TPR.TRR = (((* data) >> (18 - 3)) & MASK3);
-        DBGAPP ("do_append_cycle(O) Set TRR from ITS [a] %o\n", cpu.TPR.TRR);
+        cpu_p->TPR.TRR = (((* data) >> (18 - 3)) & MASK3);
+        DBGAPP ("do_append_cycle(O) Set TRR from ITS [a] %o\n", cpu_p->TPR.TRR);
         goto Exit;
       }
     // C(Y)18,20 >= RSDWH.R1?
-    if ((((* data) >> (18 - 3)) & MASK3) >= cpu.RSDWH_R1)
+    if ((((* data) >> (18 - 3)) & MASK3) >= cpu_p->RSDWH_R1)
       {
         // C(Y)18,20 -> C(TPR.TRR)
-        cpu.TPR.TRR = (((* data) >> (18 - 3)) & MASK3);
-        DBGAPP ("do_append_cycle(O) Set TRR from ITS [b] %o\n", cpu.TPR.TRR);
+        cpu_p->TPR.TRR = (((* data) >> (18 - 3)) & MASK3);
+        DBGAPP ("do_append_cycle(O) Set TRR from ITS [b] %o\n", cpu_p->TPR.TRR);
       }
     else
       {
         // RSDWH.R1 -> C(TPR.TRR)
-        cpu.TPR.TRR = cpu.RSDWH_R1;
+        cpu_p->TPR.TRR = cpu_p->RSDWH_R1;
         DBGAPP ("do_append_cycle(O) Set TRR from RSDWH_R1 [c] %o\n",
-                   cpu.TPR.TRR);
+                   cpu_p->TPR.TRR);
       }
     goto Exit;
     
@@ -2333,49 +2333,49 @@ P:; // ITP
 
     n = GET_PRN (* data);
     // C(TPR.TRR) >= RSDWH.R1?
-    if (cpu.TPR.TRR >= cpu.RSDWH_R1)
+    if (cpu_p->TPR.TRR >= cpu_p->RSDWH_R1)
       {
         // C(TPR.TRR) >= C(PRn .RNR)?
-        if (cpu.TPR.TRR >= cpu.PR[n].RNR)
+        if (cpu_p->TPR.TRR >= cpu_p->PR[n].RNR)
           goto Exit;
         // C(PRn .RNR) -> C(TPR.TRR)
-        cpu.TPR.TRR = cpu.PR[n].RNR;
+        cpu_p->TPR.TRR = cpu_p->PR[n].RNR;
         goto Exit;
       }
     // C(PRn.RNR) >= RSDWH.R1?
-    if (cpu.PR[n].RNR >= cpu.RSDWH_R1)
+    if (cpu_p->PR[n].RNR >= cpu_p->RSDWH_R1)
       {
         // C(PRn .RNR) -> C(TPR.TRR)
-        cpu.TPR.TRR = cpu.PR[n].RNR;
+        cpu_p->TPR.TRR = cpu_p->PR[n].RNR;
       }
     else
       {
         // RSDWH.R1 -> C(TPR.TRR)
-        cpu.TPR.TRR = cpu.RSDWH_R1;
+        cpu_p->TPR.TRR = cpu_p->RSDWH_R1;
       }
     goto Exit;
     
 
 Exit:;
 
-    PNL (cpu.APUDataBusOffset = cpu.TPR.CA;)
-    PNL (cpu.APUDataBusAddr = finalAddress;)
+    PNL (cpu_p->APUDataBusOffset = cpu_p->TPR.CA;)
+    PNL (cpu_p->APUDataBusAddr = finalAddress;)
 
-    PNL (L68_ (cpu.apu.state |= apu_FA;))
+    PNL (L68_ (cpu_p->apu.state |= apu_FA;))
 
     DBGAPP ("do_append_cycle (Exit) PRR %o PSR %05o P %o IC %06o\n",
-            cpu.PPR.PRR, cpu.PPR.PSR, cpu.PPR.P, cpu.PPR.IC);
+            cpu_p->PPR.PRR, cpu_p->PPR.PSR, cpu_p->PPR.P, cpu_p->PPR.IC);
     DBGAPP ("do_append_cycle (Exit) TRR %o TSR %05o TBR %02o CA %06o\n",
-            cpu.TPR.TRR, cpu.TPR.TSR, cpu.TPR.TBR, cpu.TPR.CA);
+            cpu_p->TPR.TRR, cpu_p->TPR.TSR, cpu_p->TPR.TBR, cpu_p->TPR.CA);
 
-    //cpu.TPR.CA = address;
+    //cpu_p->TPR.CA = address;
     return finalAddress;    // or 0 or -1???
   }
 
 // Translate a segno:offset to a absolute address.
 // Return 0 if successful.
 
-int dbgLookupAddress (word18 segno, word18 offset, word24 * finalAddress,
+int dbgLookupAddress (cpu_state_t *cpu_p, word18 segno, word18 offset, word24 * finalAddress,
                       char * * msg)
   {
     // Local copies so we don't disturb machine state
@@ -2383,14 +2383,14 @@ int dbgLookupAddress (word18 segno, word18 offset, word24 * finalAddress,
     ptw_s PTW1;
     sdw_s SDW1;
 
-   if (2u * segno >= 16u * (cpu.DSBR.BND + 1u))
+   if (2u * segno >= 16u * (cpu_p->DSBR.BND + 1u))
      {
        if (msg)
          * msg = "DSBR boundary violation.";
        return 1;
      }
 
-    if (cpu.DSBR.U == 0)
+    if (cpu_p->DSBR.U == 0)
       {
         // fetch_dsptw
 
@@ -2398,7 +2398,7 @@ int dbgLookupAddress (word18 segno, word18 offset, word24 * finalAddress,
         word24 x1 = (2 * segno) / 1024; // floor
 
         word36 PTWx1;
-        core_read ((cpu.DSBR.ADDR + x1) & PAMASK, & PTWx1, __func__);
+        core_read (cpu_p, (cpu_p->DSBR.ADDR + x1) & PAMASK, & PTWx1, __func__);
         
         PTW1.ADDR = GETHI (PTWx1);
         PTW1.U = TSTBIT (PTWx1, 9);
@@ -2419,7 +2419,7 @@ int dbgLookupAddress (word18 segno, word18 offset, word24 * finalAddress,
     
         word36 SDWeven, SDWodd;
     
-        core_read2 (((((word24)PTW1. ADDR & 0777760) << 6) + y1) & PAMASK, 
+        core_read2 (cpu_p, ((((word24)PTW1. ADDR & 0777760) << 6) + y1) & PAMASK, 
                     & SDWeven, & SDWodd, __func__);
     
         // even word
@@ -2447,7 +2447,7 @@ int dbgLookupAddress (word18 segno, word18 offset, word24 * finalAddress,
 
         word36 SDWeven, SDWodd;
         
-        core_read2 ((cpu.DSBR.ADDR + 2 * segno) & PAMASK, 
+        core_read2 (cpu_p, (cpu_p->DSBR.ADDR + 2 * segno) & PAMASK, 
                     & SDWeven, & SDWodd, __func__);
         
         // even word
@@ -2498,7 +2498,7 @@ int dbgLookupAddress (word18 segno, word18 offset, word24 * finalAddress,
     
         word36 PTWx2;
     
-        core_read ((SDW1.ADDR + x2) & PAMASK, & PTWx2, __func__);
+        core_read (cpu_p, (SDW1.ADDR + x2) & PAMASK, & PTWx2, __func__);
     
         PTW1.ADDR = GETHI (PTWx2);
         PTW1.U = TSTBIT (PTWx2, 9);

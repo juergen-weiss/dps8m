@@ -22,13 +22,13 @@
 #include <unistd.h>
 
 #include "dps8.h"
+#include "dps8_cpu.h"
 #include "dps8_addrmods.h"
 #include "dps8_sys.h"
 #include "dps8_faults.h"
 #include "dps8_scu.h"
 #include "dps8_iom.h"
 #include "dps8_cable.h"
-#include "dps8_cpu.h"
 #include "dps8_append.h"
 #include "dps8_ins.h"
 #include "dps8_loader.h"
@@ -50,7 +50,7 @@
 __thread uint current_running_cpu_idx;
 #endif
 
-#define DBG_CTR cpu.cycleCnt
+#define DBG_CTR cpu_p->cycleCnt
 
 // XXX Use this when we assume there is only a single cpu unit
 #define ASSUME0 0
@@ -429,11 +429,11 @@ static char * cycle_str (cycles_e cycle)
       }
   }
 
-static void set_cpu_cycle (cycles_e cycle)
+static void set_cpu_cycle (cpu_state_t *cpu_p, cycles_e cycle)
   {
     sim_debug (DBG_CYCLE, & cpu_dev, "Setting cycle to %s\n",
                cycle_str (cycle));
-    cpu.cycle = cycle;
+    cpu_p->cycle = cycle;
   }
 
 // DPS8M Memory of 36 bit words is implemented as an array of 64 bit words.
@@ -455,6 +455,7 @@ uint set_cpu_idx (UNUSED uint cpu_idx)
 
 static void cpu_reset_unit_idx (UNUSED uint cpun, bool clear_mem)
   {
+    cpu_state_t *cpu_p = & cpus [cpun];
     uint save = set_cpu_idx (cpun);
     if (clear_mem)
       {
@@ -473,52 +474,52 @@ static void cpu_reset_unit_idx (UNUSED uint cpun, bool clear_mem)
           M [i] = MEM_UNINITIALIZED;
 #endif
       }
-    cpu.rA = 0;
-    cpu.rQ = 0;
+    cpu_p->rA = 0;
+    cpu_p->rQ = 0;
     
-    cpu.PPR.IC = 0;
-    cpu.PPR.PRR = 0;
-    cpu.PPR.PSR = 0;
-    cpu.PPR.P = 1;
-    cpu.RSDWH_R1 = 0;
-    cpu.rTR = MASK27;
+    cpu_p->PPR.IC = 0;
+    cpu_p->PPR.PRR = 0;
+    cpu_p->PPR.PSR = 0;
+    cpu_p->PPR.P = 1;
+    cpu_p->RSDWH_R1 = 0;
+    cpu_p->rTR = MASK27;
 //#if defined(THREADZ) || defined(LOCKLESS)
-//    clock_gettime (CLOCK_BOOTTIME, & cpu.rTRTime);
+//    clock_gettime (CLOCK_BOOTTIME, & cpu_p->rTRTime);
 //#endif
 #if ISOLTS
-    cpu.shadowTR = 0;
-    cpu.rTRlsb = 0;
+    cpu_p->shadowTR = 0;
+    cpu_p->rTRlsb = 0;
 #endif
-    cpu.rTR = MASK27;
-    cpu.rTRticks = 0;
+    cpu_p->rTR = MASK27;
+    cpu_p->rTRticks = 0;
  
-    set_addr_mode (ABSOLUTE_mode);
+    set_addr_mode (cpu_p, ABSOLUTE_mode);
     SET_I_NBAR;
     
-    cpu.CMR.luf = 3;    // default of 16 mS
-    cpu.cu.SD_ON = cpu.switches.disable_wam ? 0 : 1;
-    cpu.cu.PT_ON = cpu.switches.disable_wam ? 0 : 1;
+    cpu_p->CMR.luf = 3;    // default of 16 mS
+    cpu_p->cu.SD_ON = cpu_p->switches.disable_wam ? 0 : 1;
+    cpu_p->cu.PT_ON = cpu_p->switches.disable_wam ? 0 : 1;
  
-    set_cpu_cycle (FETCH_cycle);
+    set_cpu_cycle (cpu_p, FETCH_cycle);
 
-    cpu.wasXfer = false;
-    cpu.wasInhibited = false;
+    cpu_p->wasXfer = false;
+    cpu_p->wasInhibited = false;
 
-    cpu.interrupt_flag = false;
-    cpu.g7_flag = false;
+    cpu_p->interrupt_flag = false;
+    cpu_p->g7_flag = false;
 
-    cpu.faultRegister [0] = 0;
-    cpu.faultRegister [1] = 0;
+    cpu_p->faultRegister [0] = 0;
+    cpu_p->faultRegister [1] = 0;
 
 #ifdef RAPRx
-    cpu.apu.lastCycle = UNKNOWN_CYCLE;
+    cpu_p->apu.lastCycle = UNKNOWN_CYCLE;
 #endif
 
-    memset (& cpu.PPR, 0, sizeof (struct ppr_s));
+    memset (& cpu_p->PPR, 0, sizeof (struct ppr_s));
 
-    setup_scbank_map ();
+    setup_scbank_map (cpu_p);
 
-    tidy_cu ();
+    tidy_cu (cpu_p);
     set_cpu_idx (save);
 #ifdef TEST_OLIN
           cmpxchg ();
@@ -756,7 +757,7 @@ static t_stat cpu_boot (UNUSED int32 cpu_unit_idx, UNUSED DEVICE * dptr)
     return SCPE_ARG;
   }
 
-void setup_scbank_map (void)
+void setup_scbank_map (cpu_state_t *cpu_p)
   {
     sim_debug (DBG_DEBUG, & cpu_dev,
                "setup_scbank_map: SCBANK %d N_SCBANKS %d MEM_SIZE_MAX %d\n",
@@ -766,16 +767,16 @@ void setup_scbank_map (void)
     for (uint pg = 0; pg < N_SCBANKS; pg ++)
       {
         // The port number that the page of memory can be accessed through
-        cpu.scbank_map [pg] = -1; 
+        cpu_p->scbank_map [pg] = -1; 
         // The offset in M of the page of memory on the other side of the
         // port
-        cpu.scbank_pg_os [pg] = -1; 
+        cpu_p->scbank_pg_os [pg] = -1; 
       }
 
     // For each port (which is connected to a SCU
     for (int port_num = 0; port_num < N_CPU_PORTS; port_num ++)
       {
-        if (! cpu.switches.enable [port_num])
+        if (! cpu_p->switches.enable [port_num])
           continue;
         // This will happen during SIMH early initialization before
         // the cables are run.
@@ -787,7 +788,7 @@ void setup_scbank_map (void)
         uint scu_unit_idx = cables->cpu_to_scu[current_running_cpu_idx][port_num].scu_unit_idx;
 
         // Calculate the amount of memory in the SCU in words
-        uint store_size = cpu.switches.store_size [port_num];
+        uint store_size = cpu_p->switches.store_size [port_num];
         // Map store size configuration switch (0-8) to memory size.
 #ifdef DPS8M
         uint store_table [8] = 
@@ -818,7 +819,7 @@ void setup_scbank_map (void)
 #endif
         uint sz = store_table [store_size];
         // Calculate the base address of the memory in words
-        uint assignment = cpu.switches.assignment [port_num];
+        uint assignment = cpu_p->switches.assignment [port_num];
         uint base = assignment * sz;
 
         // Now convert to SCBANK (number of pages, page number)
@@ -834,17 +835,17 @@ void setup_scbank_map (void)
             uint scpg = scbase + pg;
             if (scpg < N_SCBANKS)
               {
-                if (cpu.scbank_map [scpg] != -1)
+                if (cpu_p->scbank_map [scpg] != -1)
                   {
                     sim_warn ("scbank overlap scpg %d (%o) old port %d "
                                 "newport %d\n",
-                                scpg, scpg, cpu.scbank_map [scpg], port_num);
+                                scpg, scpg, cpu_p->scbank_map [scpg], port_num);
                   }
                 else
                   {
-                    cpu.scbank_map [scpg] = port_num;
-                    cpu.scbank_base [scpg] = base;
-                    cpu.scbank_pg_os [scpg] =
+                    cpu_p->scbank_map [scpg] = port_num;
+                    cpu_p->scbank_base [scpg] = base;
+                    cpu_p->scbank_pg_os [scpg] =
                       (int) ((uint) scu_unit_idx * 4u * 1024u * 1024u +
                       scpg * SCBANK);
                   }
@@ -859,7 +860,7 @@ void setup_scbank_map (void)
       }
     for (uint pg = 0; pg < N_SCBANKS; pg ++)
       sim_debug (DBG_DEBUG, & cpu_dev, "setup_scbank_map: %d:%d\n",
-                 pg, cpu.scbank_map [pg]);
+                 pg, cpu_p->scbank_map [pg]);
   }
 
 #ifdef SCUMEM
@@ -868,18 +869,18 @@ int lookup_cpu_mem_map (word24 addr, word24 * offset)
     uint scpg = addr / SCBANK;
     if (scpg < N_SCBANKS)
       {
-        * offset = addr - cpu.scbank_base[scpg];
-        return cpu.scbank_map[scpg];
+        * offset = addr - cpu_p->scbank_base[scpg];
+        return cpu_p->scbank_map[scpg];
       }
     return -1;
   }
 #else
-int lookup_cpu_mem_map (word24 addr)
+int lookup_cpu_mem_map (cpu_state_t *cpu_p, word24 addr)
   {
     uint scpg = addr / SCBANK;
     if (scpg < N_SCBANKS)
       {
-        return cpu.scbank_map[scpg];
+        return cpu_p->scbank_map[scpg];
       }
     return -1;
   }
@@ -901,9 +902,9 @@ static void get_serial_number (void)
         char buffer [81] = "";
         fgets (buffer, sizeof (buffer), fp);
         uint cpun, sn;
-        if (sscanf (buffer, "sn: %u", & cpu.switches.serno) == 1)
+        if (sscanf (buffer, "sn: %u", & cpus[0].switches.serno) == 1)
           {
-            sim_msg ("Serial number is %u\n", cpu.switches.serno);
+            sim_msg ("Serial number is %u\n", cpus[0].switches.serno);
             havesn = true;
           }
         else if (sscanf (buffer, "sn%u: %u", & cpun, & sn) == 2)
@@ -976,8 +977,10 @@ static void ev_poll_cb (uv_timer_t * UNUSED handle)
 #ifdef STATS
         do_stats ();
 #endif
-        cpu.instrCntT0 = cpu.instrCntT1;
-        cpu.instrCntT1 = cpu.instrCnt;
+#if 0
+        cpu_p->instrCntT0 = cpu_p->instrCntT1;
+        cpu_p->instrCntT1 = cpu_p->instrCnt;
+#endif
 
       }
     fnpProcessEvent (); 
@@ -1051,11 +1054,12 @@ void cpu_init (void)
 
     // TODO: reset *all* other structures to zero
     
-    cpu.instrCnt = 0;
-    cpu.cycleCnt = 0;
+#if 0
+    cpu_p->instrCnt = 0;
+    cpu_p->cycleCnt = 0;
     for (int i = 0; i < N_FAULTS; i ++)
-      cpu.faultCnt [i] = 0;
-    
+      cpu_p->faultCnt [i] = 0;
+#endif
     
 #ifdef MATRIX
     initializeTheMatrix ();
@@ -1071,7 +1075,7 @@ static void cpu_reset (void)
 
     set_cpu_idx (0);
 
-    sim_debug (DBG_INFO, & cpu_dev, "CPU reset: Running\n");
+    //sim_debug (DBG_INFO, & cpu_dev, "CPU reset: Running\n");
 
   }
 
@@ -1209,12 +1213,12 @@ uint current_running_cpu_idx;
  
 // Called with SCU lock set
 
-static uint get_highest_intr (void)
+static uint get_highest_intr (cpu_state_t *cpu_p)
   {
     uint fp = 1;
     for (uint scu_unit_idx = 0; scu_unit_idx < N_SCU_UNITS_MAX; scu_unit_idx ++)
       {
-        if (cpu.events.XIP [scu_unit_idx])
+        if (cpu_p->events.XIP [scu_unit_idx])
           {
             fp = scu_get_highest_intr (scu_unit_idx); // CALLED WITH SCU LOCK
             if (fp != 1)
@@ -1224,12 +1228,12 @@ static uint get_highest_intr (void)
     return fp;
   }
 
-bool sample_interrupts (void)
+bool sample_interrupts (cpu_state_t *cpu_p)
   {
-    cpu.lufCounter = 0;
+    cpu_p->lufCounter = 0;
     for (uint scu_unit_idx = 0; scu_unit_idx < N_SCU_UNITS_MAX; scu_unit_idx ++)
       {
-        if (cpu.events.XIP [scu_unit_idx])
+        if (cpu_p->events.XIP [scu_unit_idx])
           {
             return true;
           }
@@ -1264,12 +1268,12 @@ t_stat simh_hooks (void)
     // sim_brk_test expects a 32 bit address; PPR.IC into the low 18, and
     // PPR.PSR into the high 12
     if (sim_brk_summ &&
-        sim_brk_test ((cpu.PPR.IC & 0777777) |
-                      ((((t_addr) cpu.PPR.PSR) & 037777) << 18),
+        sim_brk_test ((cpu_p->PPR.IC & 0777777) |
+                      ((((t_addr) cpu_p->PPR.PSR) & 037777) << 18),
                       SWMASK ('E')))  /* breakpoint? */
       return STOP_BKPT; /* stop simulation */
 #ifndef SPEED
-    if (sim_deb_break && cpu.cycleCnt >= sim_deb_break)
+    if (sim_deb_break && cpu_p->cycleCnt >= sim_deb_break)
       return STOP_BKPT; /* stop simulation */
 #endif
 #endif
@@ -1282,12 +1286,12 @@ t_stat simh_hooks (void)
 static void panel_process_event (void)
   {
     // INITIALIZE pressed; treat at as a BOOT.
-    if (cpu.panelInitialize && cpu.DATA_panel_s_trig_sw == 0) 
+    if (cpu_p->panelInitialize && cpu_p->DATA_panel_s_trig_sw == 0) 
       {
          // Wait for release
-         while (cpu.panelInitialize) 
+         while (cpu_p->panelInitialize) 
            ;
-         if (cpu.DATA_panel_init_sw)
+         if (cpu_p->DATA_panel_init_sw)
            cpu_reset_unit_idx (ASSUME0, true); // INITIALIZE & CLEAR
          else
            cpu_reset_unit_idx (ASSUME0, false); // INITIALIZE
@@ -1295,20 +1299,20 @@ static void panel_process_event (void)
          do_boot ();
       }
     // EXECUTE pressed; EXECUTE PB set, EXECUTE FAULT set
-    if (cpu.DATA_panel_s_trig_sw == 0 &&
-        cpu.DATA_panel_execute_sw && // EXECUTE buttton
-        cpu.DATA_panel_scope_sw && // 'EXECUTE PB/SCOPE REPEAT' set to PB
-        cpu.DATA_panel_exec_sw == 0) // 'EXECUTE SWITCH/EXECUTE FAULT' 
+    if (cpu_p->DATA_panel_s_trig_sw == 0 &&
+        cpu_p->DATA_panel_execute_sw && // EXECUTE buttton
+        cpu_p->DATA_panel_scope_sw && // 'EXECUTE PB/SCOPE REPEAT' set to PB
+        cpu_p->DATA_panel_exec_sw == 0) // 'EXECUTE SWITCH/EXECUTE FAULT' 
                                      //  set to FAULT
       {
         // Wait for release
-        while (cpu.DATA_panel_execute_sw) 
+        while (cpu_p->DATA_panel_execute_sw) 
           ;
 
-        if (cpu.DATA_panel_exec_sw) // EXECUTE SWITCH
+        if (cpu_p->DATA_panel_exec_sw) // EXECUTE SWITCH
           {
             cpu_reset_unit_idx (ASSUME0, false);
-            cpu.cu.IWB = cpu.switches.data_switches;
+            cpu_p->cu.IWB = cpu_p->switches.data_switches;
             set_cpu_cycle (EXEC_cycle);
           }
          else // EXECUTE FAULT
@@ -1488,16 +1492,16 @@ void * cpu_thread_main (void * arg)
     sim_msg ("CPU %c thread created\n", 'a' + myid);
 
     setSignals ();
-    threadz_sim_instr ();
+    threadz_sim_instr (&cpus[myid]);
     return NULL;
   }
 #endif // THREADZ
 
-static void do_LUF_fault (void)
+static void do_LUF_fault (cpu_state_t *cpu_p)
   {
     CPT (cpt1U, 16); // LUF
-    cpu.lufCounter = 0;
-    cpu.lufOccurred = false;
+    cpu_p->lufCounter = 0;
+    cpu_p->lufOccurred = false;
 #ifdef ISOLTS
 // This is a hack to fix ISOLTS 776. ISOLTS checks that the TR has
 // decremented by the LUF timeout value. To implement this, we set
@@ -1517,7 +1521,7 @@ static void do_LUF_fault (void)
 //    / 0.0009765625
 //
 //  TR = 1024 << LUF
-    cpu.shadowTR = (word27) cpu.TR0 - (1024u << (is_priv_mode () ? 4 : cpu.CMR.luf));
+    cpu_p->shadowTR = (word27) cpu_p->TR0 - (1024u << (is_priv_mode () ? 4 : cpu_p->CMR.luf));
 
 
 // That logic fails for test 785. 
@@ -1549,26 +1553,26 @@ static void do_LUF_fault (void)
  *
  */
 
-static void set_temporary_absolute_mode (void)
+static void set_temporary_absolute_mode (cpu_state_t *cpu_p)
   {
     CPT (cpt1L, 20); // set temp. abs. mode
-    cpu.secret_addressing_mode = true;
-    cpu.cu.XSF = false;
+    cpu_p->secret_addressing_mode = true;
+    cpu_p->cu.XSF = false;
 sim_debug (DBG_TRACEEXT, & cpu_dev, "set_temporary_absolute_mode bit 29 sets XSF to 0\n");
-    //cpu.went_appending = false;
+    //cpu_p->went_appending = false;
   }
 
-static bool clear_temporary_absolute_mode (void)
+static bool clear_temporary_absolute_mode (cpu_state_t *cpu_p)
   {
     CPT (cpt1L, 21); // clear temp. abs. mode
-    cpu.secret_addressing_mode = false;
-    return cpu.cu.XSF;
-    //return cpu.went_appending;
+    cpu_p->secret_addressing_mode = false;
+    return cpu_p->cu.XSF;
+    //return cpu_p->went_appending;
   }
 
-t_stat threadz_sim_instr (void)
+t_stat threadz_sim_instr (cpu_state_t *cpu_p)
   {
-//cpu.have_tst_lock = false;
+//cpu_p->have_tst_lock = false;
 
     t_stat reason = 0;
       
@@ -1582,7 +1586,7 @@ t_stat threadz_sim_instr (void)
 #endif
 
 #ifdef ROUND_ROBIN
-    cpu.isRunning = true;
+    cpu_p->isRunning = true;
     set_cpu_idx (cpu_dev.numunits - 1);
 
 setCPU:;
@@ -1591,7 +1595,7 @@ setCPU:;
     for (c = 0; c < cpu_dev.numunits; c ++)
       {
         set_cpu_idx (c);
-        if (cpu.isRunning)
+        if (cpu_p->isRunning)
           break;
       }
     if (c == cpu_dev.numunits)
@@ -1606,7 +1610,7 @@ setCPU:;
 #endif
 
     // This allows long jumping to the top of the state machine
-    int val = setjmp (cpu.jmpMain);
+    int val = setjmp (cpu_p->jmpMain);
 
     switch (val)
       {
@@ -1615,7 +1619,7 @@ setCPU:;
             reason = 0;
             break;
         case JMP_SYNC_FAULT_RETURN:
-            set_cpu_cycle (SYNC_FAULT_RTN_cycle);
+	    set_cpu_cycle (cpu_p, SYNC_FAULT_RTN_cycle);
             break;
         case JMP_STOP:
             reason = STOP_STOP;
@@ -1628,12 +1632,12 @@ setCPU:;
             // was xfer was false; or in a DIS cycle, in
             // which case we want it false so interrupts 
             // can happen.
-            cpu.wasXfer = false;
+            cpu_p->wasXfer = false;
              
-            set_cpu_cycle (FETCH_cycle);
+            set_cpu_cycle (cpu_p, FETCH_cycle);
             break;
         case JMP_RESTART:
-            set_cpu_cycle (EXEC_cycle);
+	    set_cpu_cycle (cpu_p, EXEC_cycle);
             break;
         default:
           sim_warn ("longjmp value of %d unhandled\n", val);
@@ -1642,7 +1646,7 @@ setCPU:;
 
     // Main instruction fetch/decode loop 
 
-    DCDstruct * ci = & cpu.currentInstruction;
+    DCDstruct * ci = & cpu_p->currentInstruction;
 
     do
       {
@@ -1662,7 +1666,7 @@ setCPU:;
 // If we only test every 1000 cycles, we shouldn't miss by more then
 // 10%...
 
-        //if ((! cpu.wasInhibited) && fast_queue_subsample ++ > 1024) // ~ 1KHz
+        //if ((! cpu_p->wasInhibited) && fast_queue_subsample ++ > 1024) // ~ 1KHz
         //static uint fastQueueSubsample = 0;
         if (fast_queue_subsample ++ > sys_opts.sys_poll_check_rate) // ~ 1KHz
           {
@@ -1676,8 +1680,8 @@ setCPU:;
           {
             slowQueueSubsample = 0;
             rdrProcessEvent ();
-            cpu.instrCntT0 = cpu.instrCntT1;
-            cpu.instrCntT1 = cpu.instrCnt;
+            cpu_p->instrCntT0 = cpu_p->instrCntT1;
+            cpu_p->instrCntT1 = cpu_p->instrCnt;
           }
         static uint queueSubsample = 0;
         if (queueSubsample ++ > 10240) // ~ 100Hz
@@ -1690,7 +1694,7 @@ setCPU:;
             PNL (panel_process_event ());
           }
 #endif
-        cpu.cycleCnt ++;
+        cpu_p->cycleCnt ++;
 #endif // ! THREADZ
 
 #ifdef TEST_OLIN
@@ -1708,7 +1712,7 @@ setCPU:;
 
 #endif // THREADZ
 #ifdef LOCKLESS
-	core_unlock_all();
+	core_unlock_all(cpu_p);
 	// wait on run/switch
 	//        cpuRunningWait ();
 #endif
@@ -1720,17 +1724,17 @@ setCPU:;
 #ifndef NO_EV_POLL
 #if !defined(THREADZ) && !defined(LOCKLESS)
 #ifdef ISOLTS
-        if (cpu.cycle != FETCH_cycle)
+        if (cpu_p->cycle != FETCH_cycle)
           {
             // Sync. the TR with the emulator clock.
-            cpu.rTRlsb ++;
-            if (cpu.rTRlsb >= 4)
+            cpu_p->rTRlsb ++;
+            if (cpu_p->rTRlsb >= 4)
               {
-                cpu.rTRlsb = 0;
-                cpu.shadowTR = (cpu.shadowTR - 1) & MASK27;
-                if (cpu.shadowTR == 0) // passing thorugh 0...
+                cpu_p->rTRlsb = 0;
+                cpu_p->shadowTR = (cpu_p->shadowTR - 1) & MASK27;
+                if (cpu_p->shadowTR == 0) // passing thorugh 0...
                   {
-                    if (cpu.switches.tro_enable)
+                    if (cpu_p->switches.tro_enable)
                       setG7fault (current_running_cpu_idx, FAULT_TRO, fst_zero);
                   }
               }
@@ -1747,29 +1751,29 @@ setCPU:;
 // two instructions (1/2 MHz)
 
 #if 0
-        cpu.rTR -= cpu.rTRticks * 100;
-        //cpu.rTR -= cpu.rTRticks * 50;
-        cpu.rTRticks = 0;
+        cpu_p->rTR -= cpu_p->rTRticks * 100;
+        //cpu_p->rTR -= cpu_p->rTRticks * 50;
+        cpu_p->rTRticks = 0;
 #else
 #define TR_RATE 2
 
-        cpu.rTR -= cpu.rTRticks / TR_RATE;
-        cpu.rTRticks %= TR_RATE;
+        cpu_p->rTR -= cpu_p->rTRticks / TR_RATE;
+        cpu_p->rTRticks %= TR_RATE;
 
 #endif
 
 
-        if (cpu.rTR & ~MASK27)
+        if (cpu_p->rTR & ~MASK27)
           {
-            cpu.rTR &= MASK27;
-            if (cpu.switches.tro_enable)
+            cpu_p->rTR &= MASK27;
+            if (cpu_p->switches.tro_enable)
             setG7fault (current_running_cpu_idx, FAULT_TRO, fst_zero);
           }
 
         sim_debug (DBG_CYCLE, & cpu_dev, "Cycle is %s\n",
-                   cycle_str (cpu.cycle));
+                   cycle_str (cpu_p->cycle));
 
-        switch (cpu.cycle)
+        switch (cpu_p->cycle)
           {
             case INTERRUPT_cycle:
               {
@@ -1785,25 +1789,25 @@ setCPU:;
                 // port for which there is a bit set in the interrupt 
                 // present register.  
 
-                uint intr_pair_addr = get_highest_intr ();
+                uint intr_pair_addr = get_highest_intr (cpu_p);
 #ifdef HDBG
                 hdbgIntr (intr_pair_addr);
 #endif
-                cpu.cu.FI_ADDR = (word5) (intr_pair_addr / 2);
-                cu_safe_store ();
+                cpu_p->cu.FI_ADDR = (word5) (intr_pair_addr / 2);
+                cu_safe_store (cpu_p);
                 // XXX the whole interrupt cycle should be rewritten as an xed
                 // instruction pushed to IWB and executed 
 
                 CPT (cpt1U, 1); // safe store complete
                 // Temporary absolute mode
-                set_temporary_absolute_mode ();
+                set_temporary_absolute_mode (cpu_p);
 
                 // Set to ring 0
-                cpu.PPR.PRR = 0;
-                cpu.TPR.TRR = 0;
+                cpu_p->PPR.PRR = 0;
+                cpu_p->TPR.TRR = 0;
 
                 // Check that an interrupt is actually pending
-                if (cpu.interrupt_flag)
+                if (cpu_p->interrupt_flag)
                   {
                     CPT (cpt1U, 2); // interrupt pending
                     // clear interrupt, load interrupt pair into instruction 
@@ -1825,15 +1829,15 @@ setCPU:;
 #endif
 
                         // get interrupt pair
-                        core_read2 (intr_pair_addr,
-                                    & cpu.cu.IWB, & cpu.cu.IRODD, __func__);
-                        cpu.cu.xde = 1;
-                        cpu.cu.xdo = 1;
+                        core_read2 (cpu_p, intr_pair_addr,
+                                    & cpu_p->cu.IWB, & cpu_p->cu.IRODD, __func__);
+                        cpu_p->cu.xde = 1;
+                        cpu_p->cu.xdo = 1;
 
 
                         CPT (cpt1U, 4); // interrupt pair fetched
-                        cpu.interrupt_flag = false;
-                        set_cpu_cycle (INTERRUPT_EXEC_cycle);
+                        cpu_p->interrupt_flag = false;
+                        set_cpu_cycle (cpu_p, INTERRUPT_EXEC_cycle);
                         break;
                       } // int_pair != 1
                   } // interrupt_flag
@@ -1841,34 +1845,34 @@ setCPU:;
                 // If we get here, there was no interrupt
 
                 CPT (cpt1U, 5); // interrupt pair spurious
-                cpu.interrupt_flag = false;
-                clear_temporary_absolute_mode ();
+                cpu_p->interrupt_flag = false;
+                clear_temporary_absolute_mode (cpu_p);
                 // Restores addressing mode 
-                cu_safe_restore ();
+                cu_safe_restore (cpu_p);
                 // We can only get here if wasXfer was
                 // false, so we can assume it still is.
-                cpu.wasXfer = false;
+                cpu_p->wasXfer = false;
 // The only place cycle is set to INTERRUPT_cycle in FETCH_cycle; therefore
 // we can safely assume that is the state that should be restored.
-                set_cpu_cycle (FETCH_cycle);
+                set_cpu_cycle (cpu_p, FETCH_cycle);
               }
               break;
 
             case FETCH_cycle:
               {
 #ifdef PANEL
-                memset (cpu.cpt, 0, sizeof (cpu.cpt));
+                memset (cpu_p->cpt, 0, sizeof (cpu_p->cpt));
 #endif
                 CPT (cpt1U, 13); // fetch cycle
 
-                PNL (L68_ (cpu.INS_FETCH = false;))
+                PNL (L68_ (cpu_p->INS_FETCH = false;))
 
 // "If the interrupt inhibit bit is not set in the currect instruction 
 // word at the point of the next sequential instruction pair virtual
 // address formation, the processor samples the [group 7 and interrupts]."
 
 // Since XEx/RPx may overwrite IWB, we must remember 
-// the inhibit bits (cpu.wasInhibited).
+// the inhibit bits (cpu_p->wasInhibited).
 
 
 // If the instruction pair virtual address being formed is the result of a 
@@ -1899,30 +1903,30 @@ setCPU:;
 
                 // check BAR bound and raise store fault if above
                 // pft 04d 10070, ISOLTS-776 06ad
-                if (get_bar_mode ())
-                    get_BAR_address (cpu.PPR.IC);
+                if (get_bar_mode (cpu_p))
+		    get_BAR_address (cpu_p, cpu_p->PPR.IC);
 
                 // Don't check timer runout if privileged
                 // ISOLTS-776 04bcf, 785 02c
                 // (but do if in a DIS instruction with bit28 clear)
-                bool tmp_priv_mode = is_priv_mode ();
+                bool tmp_priv_mode = is_priv_mode (cpu_p);
                 bool noCheckTR = tmp_priv_mode && 
-                                 ! (cpu.currentInstruction.opcode == 0616 &&
-                                 ! cpu.currentInstruction.opcodeX &&
-                                 ! GET_I (cpu.cu.IWB));
-                if (! (cpu.cu.xde | cpu.cu.xdo |
-                       cpu.cu.rpt | cpu.cu.rd | cpu.cu.rl))
+                                 ! (cpu_p->currentInstruction.opcode == 0616 &&
+                                 ! cpu_p->currentInstruction.opcodeX &&
+                                 ! GET_I (cpu_p->cu.IWB));
+                if (! (cpu_p->cu.xde | cpu_p->cu.xdo |
+                       cpu_p->cu.rpt | cpu_p->cu.rd | cpu_p->cu.rl))
                   {
-                    if ((!cpu.wasInhibited) &&
-                        (cpu.PPR.IC & 1) == 0 &&
-                        (! cpu.wasXfer))
+                    if ((!cpu_p->wasInhibited) &&
+                        (cpu_p->PPR.IC & 1) == 0 &&
+                        (! cpu_p->wasXfer))
                       {
                         CPT (cpt1U, 14); // sampling interrupts
-                        cpu.interrupt_flag = sample_interrupts ();
-                        cpu.g7_flag =
+                        cpu_p->interrupt_flag = sample_interrupts (cpu_p);
+                        cpu_p->g7_flag =
                           noCheckTR ? bG7PendingNoTRO () : bG7Pending ();
                       }
-                    cpu.wasInhibited = false;
+                    cpu_p->wasInhibited = false;
                   }
                 else 
                   {
@@ -1931,9 +1935,9 @@ setCPU:;
                     // 776 04g
                     // Set the inhibit flag
                     // (I assume RPx behaves in the same way)
-                    if ((cpu.PPR.IC & 1) == 1)
+                    if ((cpu_p->PPR.IC & 1) == 1)
                       {
-                        cpu.wasInhibited = true;
+                        cpu_p->wasInhibited = true;
                       }
                   }
 
@@ -1943,22 +1947,22 @@ setCPU:;
 // pending. Multics then executes a DIS instruction (Delay Until Interrupt
 // Set). This should cause the processor to "sleep" until an interrupt is
 // signaled. The DIS instruction sees that an interrupt is pending, sets
-// cpu.interrupt_flag to signal that the CPU to service the interrupt and
-// resumes the CPU.
+// cpu_p->interrupt_flag to signal that the CPU to service the interrupt and
+// resumes the CPU_P->
 //
 // The CPU state machine sets up to fetch the next instruction. If checks to
 // see if this instruction should check for interrupts or faults according to
 // the complex rules (interrupts inhibited, even address, not RPT or XEC,
 // etc.); it this case, the test fails as the next instruction is at an odd
-// address. If the test had passed, the cpu.interrupt_flag would be set or
-// cleared depending on the pending interrupt state data, AND the cpu.g7_flag
+// address. If the test had passed, the cpu_p->interrupt_flag would be set or
+// cleared depending on the pending interrupt state data, AND the cpu_p->g7_flag
 // would be set or cleared depending on the faults pending data (in this case,
 // the connect fault).
 //
-// Because the flags were not updated, after the test, cpu.interrupt_flag is
-// set (since the DIS instruction set it) and cpu.g7_flag is not set.
+// Because the flags were not updated, after the test, cpu_p->interrupt_flag is
+// set (since the DIS instruction set it) and cpu_p->g7_flag is not set.
 //
-// Next, the CPU sees the that cpu.interrupt flag is set, and starts the
+// Next, the CPU sees the that cpu_p->interrupt flag is set, and starts the
 // interrupt cycle despite the fact that a higher priority g7 fault is pending.
 
 
@@ -1968,24 +1972,24 @@ setCPU:;
 // case it is being rechecked here. It is [locally] idempotent and light
 // weight, so this should be okay.
 
-                if (cpu.interrupt_flag)
-                  cpu.g7_flag = noCheckTR ? bG7PendingNoTRO () : bG7Pending ();
+                if (cpu_p->interrupt_flag)
+                  cpu_p->g7_flag = noCheckTR ? bG7PendingNoTRO () : bG7Pending ();
 
-                if (cpu.g7_flag)
+                if (cpu_p->g7_flag)
                   {
-                      cpu.g7_flag = false;
-                      cpu.interrupt_flag = false;
+                      cpu_p->g7_flag = false;
+                      cpu_p->interrupt_flag = false;
                       sim_debug (DBG_CYCLE, & cpu_dev,
                                  "call doG7Fault (%d)\n", !noCheckTR);
                       doG7Fault (!noCheckTR);
                   }
-                if (cpu.interrupt_flag)
+                if (cpu_p->interrupt_flag)
                   {
 // This is the only place cycle is set to INTERRUPT_cycle; therefore
 // return from interrupt can safely assume the it should set the cycle
 // to FETCH_cycle.
                     CPT (cpt1U, 15); // interrupt
-                    set_cpu_cycle (INTERRUPT_cycle);
+                    set_cpu_cycle (cpu_p, INTERRUPT_cycle);
                     break;
                   }
 
@@ -1996,41 +2000,41 @@ setCPU:;
 // limit, the fault is recognized before any instruction in the new mode is
 // executed."
 
-                cpu.lufCounter ++;
+                cpu_p->lufCounter ++;
 #if 1
-                if (cpu.lufCounter > luf_limits[cpu.CMR.luf])
+                if (cpu_p->lufCounter > luf_limits[cpu_p->CMR.luf])
                   {
                     if (tmp_priv_mode)
                       {
                         // In priv. mode the LUF is noted but not executed
-                        cpu.lufOccurred = true;
+                        cpu_p->lufOccurred = true;
                       }
                     else
                       {
-                        do_LUF_fault ();
+                        do_LUF_fault (cpu_p);
                       }
                   } // lufCounter > luf_limit
 
 
                 // After 32ms, the LUF fires regardless of priv.
-                if (cpu.lufCounter > luf_limits[4])
+                if (cpu_p->lufCounter > luf_limits[4])
                   {
-                    do_LUF_fault ();
+                    do_LUF_fault (cpu_p);
                   }
 
                 // If the LUF occured in priv. mode and we left priv. mode,
                 // fault.
-                if (! tmp_priv_mode && cpu.lufOccurred)
+                if (! tmp_priv_mode && cpu_p->lufOccurred)
                   {
-                    do_LUF_fault ();
+                    do_LUF_fault (cpu_p);
                   }
 #else
-                if ((tmp_priv_mode && cpu.lufCounter > luf_limits[4]) || 
+                if ((tmp_priv_mode && cpu_p->lufCounter > luf_limits[4]) || 
                     (! tmp_priv_mode && 
-                     cpu.lufCounter > luf_limits[cpu.CMR.luf]))
+                     cpu_p->lufCounter > luf_limits[cpu_p->CMR.luf]))
                   {
                     CPT (cpt1U, 16); // LUF
-                    cpu.lufCounter = 0;
+                    cpu_p->lufCounter = 0;
 #ifdef ISOLTS
 // This is a hack to fix ISOLTS 776. ISOLTS checks that the TR has
 // decremented by the LUF timeout value. To implement this, we set
@@ -2050,60 +2054,60 @@ setCPU:;
 //    / 0.0009765625
 //
 //  TR = 1024 << LUF
-                   cpu.shadowTR = (word27) cpu.TR0 - (1024u << (is_priv_mode () ? 4 : cpu.CMR.luf));
+                   cpu_p->shadowTR = (word27) cpu_p->TR0 - (1024u << (is_priv_mode () ? 4 : cpu_p->CMR.luf));
 #endif
                     doFault (FAULT_LUF, fst_zero, "instruction cycle lockup");
                   }
 #endif
                 // If we have done the even of an XED, do the odd
-                if (cpu.cu.xde == 0 && cpu.cu.xdo == 1)
+                if (cpu_p->cu.xde == 0 && cpu_p->cu.xdo == 1)
                   {
                     CPT (cpt1U, 17); // do XED odd
                     // Get the odd
-                    cpu.cu.IWB = cpu.cu.IRODD;
+                    cpu_p->cu.IWB = cpu_p->cu.IRODD;
                     // Do nothing next time
-                    cpu.cu.xde = cpu.cu.xdo = 0;
-                    cpu.isExec = true;
-                    cpu.isXED = true;
+                    cpu_p->cu.xde = cpu_p->cu.xdo = 0;
+                    cpu_p->isExec = true;
+                    cpu_p->isXED = true;
                   }
                 // If we have done neither of the XED
-                else if (cpu.cu.xde == 1 && cpu.cu.xdo == 1)
+                else if (cpu_p->cu.xde == 1 && cpu_p->cu.xdo == 1)
                   {
                     CPT (cpt1U, 18); // do XED even
                     // Do the even this time and the odd the next time
-                    cpu.cu.xde = 0;
-                    cpu.cu.xdo = 1;
-                    cpu.isExec = true;
-                    cpu.isXED = true;
+                    cpu_p->cu.xde = 0;
+                    cpu_p->cu.xdo = 1;
+                    cpu_p->isExec = true;
+                    cpu_p->isXED = true;
                   }
                 // If we have not yet done the XEC
-                else if (cpu.cu.xde == 1)
+                else if (cpu_p->cu.xde == 1)
                   {
                     CPT (cpt1U, 19); // do XEC
                     // do it this time, and nothing next time
-                    cpu.cu.xde = cpu.cu.xdo = 0;
-                    cpu.isExec = true;
-                    cpu.isXED = false;
+                    cpu_p->cu.xde = cpu_p->cu.xdo = 0;
+                    cpu_p->isExec = true;
+                    cpu_p->isXED = false;
                   }
                 else
                   {
                     CPT (cpt1U, 20); // not XEC or RPx
-                    cpu.isExec = false;
-                    cpu.isXED = false;
+                    cpu_p->isExec = false;
+                    cpu_p->isXED = false;
                     // fetch next instruction into current instruction struct
                     //clr_went_appending (); // XXX not sure this is the right
                                            //  place
-                    cpu.cu.XSF = 0;
+                    cpu_p->cu.XSF = 0;
 sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
-                    cpu.cu.TSN_VALID [0] = 0;
-                    PNL (cpu.prepare_state = ps_PIA);
-                    PNL (L68_ (cpu.INS_FETCH = true;))
-                    fetchInstruction (cpu.PPR.IC);
+                    cpu_p->cu.TSN_VALID [0] = 0;
+                    PNL (cpu_p->prepare_state = ps_PIA);
+                    PNL (L68_ (cpu_p->INS_FETCH = true;))
+		    fetchInstruction (cpu_p, cpu_p->PPR.IC);
                   }
 
                 CPT (cpt1U, 21); // go to exec cycle
                 advanceG7Faults ();
-                set_cpu_cycle (EXEC_cycle);
+                set_cpu_cycle (cpu_p, EXEC_cycle);
               }
               break;
 
@@ -2116,16 +2120,16 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                 // The only time we are going to execute out of IRODD is
                 // during RPD, at which time interrupts are automatically
                 // inhibited; so the following can igore RPD harmelessly
-                if (GET_I (cpu.cu.IWB))
-                  cpu.wasInhibited = true;
+                if (GET_I (cpu_p->cu.IWB))
+                  cpu_p->wasInhibited = true;
 
-                t_stat ret = executeInstruction ();
+                t_stat ret = executeInstruction (cpu_p);
 #ifdef TR_WORK_EXEC
-               cpu.rTRticks ++;
+               cpu_p->rTRticks ++;
 #endif
                 CPT (cpt1U, 23); // execution complete
 
-                add_CU_history ();
+                add_CU_history (cpu_p);
 
                 if (ret > 0)
                   {
@@ -2136,21 +2140,21 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                 if (ret == CONT_XEC)
                   {
                     CPT (cpt1U, 27); // XEx instruction
-                    cpu.wasXfer = false; 
-                    if (cpu.cycle == EXEC_cycle)
-                      set_cpu_cycle (FETCH_cycle);
+                    cpu_p->wasXfer = false; 
+                    if (cpu_p->cycle == EXEC_cycle)
+                      set_cpu_cycle (cpu_p, FETCH_cycle);
                     break;
                   }
 
                 if (ret == CONT_TRA)
                   {
                     CPT (cpt1U, 24); // transfer instruction
-                    cpu.cu.xde = cpu.cu.xdo = 0;
-                    cpu.isExec = false;
-                    cpu.isXED = false;
-                    cpu.wasXfer = true;
+                    cpu_p->cu.xde = cpu_p->cu.xdo = 0;
+                    cpu_p->isExec = false;
+                    cpu_p->isXED = false;
+                    cpu_p->wasXfer = true;
 
-                    if (cpu.cycle != EXEC_cycle) // fault or interrupt
+                    if (cpu_p->cycle != EXEC_cycle) // fault or interrupt
                       {
 
                         clearFaultCycle ();
@@ -2159,20 +2163,20 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
 // out of BAR mode) by the execution of any transfer instruction
 // other than tss during a fault or interrupt trap.
 
-                        if (! (cpu.currentInstruction.opcode == 0715 &&
-                           cpu.currentInstruction.opcodeX == 0))
+                        if (! (cpu_p->currentInstruction.opcode == 0715 &&
+                           cpu_p->currentInstruction.opcodeX == 0))
                           {
                             CPT (cpt1U, 9); // nbar set
                             SET_I_NBAR;
                           }
 
-                        if (!clear_temporary_absolute_mode ())
+                        if (!clear_temporary_absolute_mode (cpu_p))
                           {
                             // didn't go appending
                             sim_debug (DBG_TRACEEXT, & cpu_dev,
                                        "setting ABS mode\n");
                             CPT (cpt1U, 10); // temporary absolute mode
-                            set_addr_mode (ABSOLUTE_mode);
+                            set_addr_mode (cpu_p, ABSOLUTE_mode);
                           }
                         else
                           {
@@ -2185,12 +2189,12 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
 
 
                     //if (TST_I_ABS && get_went_appending ())
-                    if (TST_I_ABS && cpu.cu.XSF)
+                    if (TST_I_ABS && cpu_p->cu.XSF)
                       {
-                        set_addr_mode (APPEND_mode);
+                        set_addr_mode (cpu_p, APPEND_mode);
                       }
 
-                    set_cpu_cycle (FETCH_cycle);
+                    set_cpu_cycle (cpu_p, FETCH_cycle);
                     break;   // don't bump PPR.IC, instruction already did it
                   }
 
@@ -2262,33 +2266,33 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                          ms = (uint) (rem.tv_nsec / 1000 + req.tv_sec * 1000);
                       }
                     word27 ticks = ms * 512;
-                    if (cpu.rTR <= ticks)
+                    if (cpu_p->rTR <= ticks)
                       {
-                        if (cpu.switches.tro_enable)
+                        if (cpu_p->switches.tro_enable)
                           setG7fault (current_running_cpu_idx, FAULT_TRO,
                                       fst_zero);
                       }
-                    cpu.rTR = (cpu.rTR - ticks) & MASK27;
+                    cpu_p->rTR = (cpu_p->rTR - ticks) & MASK27;
 #else // !NO_TIMEWAIT
-		    unsigned long left = cpu.rTR * 125u / 64u;
+		    unsigned long left = cpu_p->rTR * 125u / 64u;
 		    lock_scu();
-		    if (!sample_interrupts()) {
+		    if (!sample_interrupts(cpu_p)) {
 		        left = sleepCPU (left);
 		    }
 		    unlock_scu();
                     if (left)
                       {
-                        cpu.rTR = (word27) (left * 64 / 125);
+                        cpu_p->rTR = (word27) (left * 64 / 125);
                       }
                     else
                       {
-                        if (cpu.switches.tro_enable)
+                        if (cpu_p->switches.tro_enable)
                           setG7fault (current_running_cpu_idx, FAULT_TRO,
                                       fst_zero);
-                        cpu.rTR = 0;
+                        cpu_p->rTR = 0;
                       }
 #endif // !NO_TIMEWAIT
-                    cpu.rTRticks = 0;
+                    cpu_p->rTRticks = 0;
                     break;
 #else // !THREADZ
                     //usleep (10000);
@@ -2310,26 +2314,26 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                     // 512000 is 1 second
                     // 512000/100 -> 5120  is .01 second
          
-                    cpu.rTRticks = 0;
+                    cpu_p->rTRticks = 0;
                     // Would we have underflowed while sleeping?
-                    //if ((cpu.rTR & ~ MASK27) || cpu.rTR <= 5120)
-                    //if (cpu.rTR <= 5120)
+                    //if ((cpu_p->rTR & ~ MASK27) || cpu_p->rTR <= 5120)
+                    //if (cpu_p->rTR <= 5120)
 
                     // Timer register runs at 512 KHz
                     // 512Khz / 512 is millisecods
-                    if (cpu.rTR <= sys_opts.sys_poll_interval * 512)
+                    if (cpu_p->rTR <= sys_opts.sys_poll_interval * 512)
                     
                       {
-                        if (cpu.switches.tro_enable)
+                        if (cpu_p->switches.tro_enable)
                           setG7fault (current_running_cpu_idx, FAULT_TRO,
                                       fst_zero);
                       }
-                    cpu.rTR = (cpu.rTR - sys_opts.sys_poll_interval * 512) & MASK27;
+                    cpu_p->rTR = (cpu_p->rTR - sys_opts.sys_poll_interval * 512) & MASK27;
 #endif // ! ROUND_ROBIN
                     break;
                   }
 
-                cpu.wasXfer = false;
+                cpu_p->wasXfer = false;
 
                 if (ret < 0)
                   {
@@ -2337,52 +2341,52 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                     break;
                   }
 
-                if ((! cpu.cu.repeat_first) &&
-                    (cpu.cu.rpt ||
-                     (cpu.cu.rd && (cpu.PPR.IC & 1)) ||
-                     cpu.cu.rl))
+                if ((! cpu_p->cu.repeat_first) &&
+                    (cpu_p->cu.rpt ||
+                     (cpu_p->cu.rd && (cpu_p->PPR.IC & 1)) ||
+                     cpu_p->cu.rl))
                   {
                     CPT (cpt1U, 26); // RPx instruction
-                    if (cpu.cu.rd)
-                      -- cpu.PPR.IC;
-                    cpu.wasXfer = false; 
-                    set_cpu_cycle (FETCH_cycle);
+                    if (cpu_p->cu.rd)
+                      -- cpu_p->PPR.IC;
+                    cpu_p->wasXfer = false; 
+                    set_cpu_cycle (cpu_p, FETCH_cycle);
                     break;
                   }
 
-                if (cpu.cycle == FAULT_EXEC_cycle)
+                if (cpu_p->cycle == FAULT_EXEC_cycle)
                   {
                   }
 // If we just did the odd word of a fault pair
 
-                if (cpu.cycle == FAULT_EXEC_cycle &&
-                    (! cpu.cu.xde) &&
-                    cpu.cu.xdo)
+                if (cpu_p->cycle == FAULT_EXEC_cycle &&
+                    (! cpu_p->cu.xde) &&
+                    cpu_p->cu.xdo)
                   {
-                    clear_temporary_absolute_mode ();
-                    cu_safe_restore ();
-                    cpu.wasXfer = false;
+                    clear_temporary_absolute_mode (cpu_p);
+                    cu_safe_restore (cpu_p);
+                    cpu_p->wasXfer = false;
                     CPT (cpt1U, 12); // cu restored
-                    set_cpu_cycle (FETCH_cycle);
+                    set_cpu_cycle (cpu_p, FETCH_cycle);
                     clearFaultCycle ();
                     // cu_safe_restore should have restored CU.IWB, so
                     // we can determine the instruction length.
                     // decode_instruction() restores ci->info->ndes
-                    decode_instruction (IWB_IRODD, & cpu.currentInstruction);
+                    decode_instruction (cpu_p, IWB_IRODD, & cpu_p->currentInstruction);
 
-                    cpu.PPR.IC += ci->info->ndes;
-                    cpu.PPR.IC ++;
+                    cpu_p->PPR.IC += ci->info->ndes;
+                    cpu_p->PPR.IC ++;
                     break;
                   }
 
 // If we just did the odd word of a interrupt pair
 
-                if (cpu.cycle == INTERRUPT_EXEC_cycle &&
-                    (! cpu.cu.xde) &&
-                    cpu.cu.xdo)
+                if (cpu_p->cycle == INTERRUPT_EXEC_cycle &&
+                    (! cpu_p->cu.xde) &&
+                    cpu_p->cu.xdo)
                   {
-                    clear_temporary_absolute_mode ();
-                    cu_safe_restore ();
+                    clear_temporary_absolute_mode (cpu_p);
+                    cu_safe_restore (cpu_p);
 // The only place cycle is set to INTERRUPT_cycle in FETCH_cycle; therefore
 // we can safely assume that is the state that should be restored.
                     CPT (cpt1U, 12); // cu restored
@@ -2390,53 +2394,53 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
 
 // Even word of fault or interrupt pair
 
-                if (cpu.cycle != EXEC_cycle && cpu.cu.xde)
+                if (cpu_p->cycle != EXEC_cycle && cpu_p->cu.xde)
                   {
                     // Get the odd
-                    cpu.cu.IWB = cpu.cu.IRODD;
-                    cpu.cu.xde = 0;
-                    cpu.isExec = true;
+                    cpu_p->cu.IWB = cpu_p->cu.IRODD;
+                    cpu_p->cu.xde = 0;
+                    cpu_p->isExec = true;
                     break; // go do the odd word
                   }
 
-                if (cpu.cu.xde || cpu.cu.xdo) // we are in an XEC/XED
+                if (cpu_p->cu.xde || cpu_p->cu.xdo) // we are in an XEC/XED
                   {
                     CPT (cpt1U, 27); // XEx instruction
-                    cpu.wasXfer = false; 
-                    set_cpu_cycle (FETCH_cycle);
+                    cpu_p->wasXfer = false; 
+                    set_cpu_cycle (cpu_p, FETCH_cycle);
                     break;
                   }
 
-                cpu.cu.xde = cpu.cu.xdo = 0;
-                cpu.isExec = false;
-                cpu.isXED = false;
+                cpu_p->cu.xde = cpu_p->cu.xdo = 0;
+                cpu_p->isExec = false;
+                cpu_p->isXED = false;
 
-                if (cpu.cycle != INTERRUPT_EXEC_cycle)
+                if (cpu_p->cycle != INTERRUPT_EXEC_cycle)
                   {
-                    cpu.PPR.IC ++;
+                    cpu_p->PPR.IC ++;
                     if (ci->info->ndes > 0)
-                      cpu.PPR.IC += ci->info->ndes;
+                      cpu_p->PPR.IC += ci->info->ndes;
                   }
 
                 CPT (cpt1U, 28); // enter fetch cycle
-                cpu.wasXfer = false; 
-                set_cpu_cycle (FETCH_cycle);
+                cpu_p->wasXfer = false; 
+                set_cpu_cycle (cpu_p, FETCH_cycle);
               }
               break;
 
             case SYNC_FAULT_RTN_cycle:
               {
                 CPT (cpt1U, 29); // sync. fault return
-                cpu.wasXfer = false; 
+                cpu_p->wasXfer = false; 
                 // cu_safe_restore should have restored CU.IWB, so
                 // we can determine the instruction length.
                 // decode_instruction() restores ci->info->ndes
-                decode_instruction (IWB_IRODD, & cpu.currentInstruction);
+                decode_instruction (cpu_p, IWB_IRODD, & cpu_p->currentInstruction);
 
-                cpu.PPR.IC += ci->info->ndes;
-                cpu.PPR.IC ++;
-                cpu.wasXfer = false; 
-                set_cpu_cycle (FETCH_cycle);
+                cpu_p->PPR.IC += ci->info->ndes;
+                cpu_p->PPR.IC ++;
+                cpu_p->wasXfer = false; 
+                set_cpu_cycle (cpu_p, FETCH_cycle);
               }
               break;
 
@@ -2464,8 +2468,8 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                 // Checking for F(A)NP here is equivalent to checking that the
                 // last append cycle has made it as far as H/I without a fault.
                 // Also reset it on TRB fault. ISOLTS-870 05a
-                if (cpu.cu.APUCycleBits & 060 || cpu.secret_addressing_mode)
-                    set_apu_status (apuStatus_FABS);
+                if (cpu_p->cu.APUCycleBits & 060 || cpu_p->secret_addressing_mode)
+		    set_apu_status (cpu_p, apuStatus_FABS);
 
                 // XXX the whole fault cycle should be rewritten as an xed 
                 // instruction pushed to IWB and executed 
@@ -2477,52 +2481,52 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                 //  due to CU overlap
 
                 // keep IRODD untouched if TRB occurred in an even location
-                if (cpu.faultNumber != FAULT_TRB || cpu.cu.xde == 0)
+                if (cpu_p->faultNumber != FAULT_TRB || cpu_p->cu.xde == 0)
                   {
-                    cu_safe_store ();
+                    cu_safe_store (cpu_p);
                   }
                 else
                   {
-                    word36 tmpIRODD = cpu.scu_data[7];
-                    cu_safe_store ();
-                    cpu.scu_data[7] = tmpIRODD;
+                    word36 tmpIRODD = cpu_p->scu_data[7];
+                    cu_safe_store (cpu_p);
+                    cpu_p->scu_data[7] = tmpIRODD;
                   }
                 CPT (cpt1U, 31); // safe store complete
 
                 // Temporary absolute mode
-                set_temporary_absolute_mode ();
+                set_temporary_absolute_mode (cpu_p);
 
                 // Set to ring 0
-                cpu.PPR.PRR = 0;
-                cpu.TPR.TRR = 0;
+                cpu_p->PPR.PRR = 0;
+                cpu_p->TPR.TRR = 0;
 
                 // (12-bits of which the top-most 7-bits are used)
-                uint fltAddress = (cpu.switches.FLT_BASE << 5) & 07740;
+                uint fltAddress = (cpu_p->switches.FLT_BASE << 5) & 07740;
 #ifdef L68
-                if (cpu.is_FFV)
+                if (cpu_p->is_FFV)
                   {
-                    cpu.is_FFV = false;
+                    cpu_p->is_FFV = false;
                     CPTUR (cptUseMR);
                     // The high 15 bits
-                    fltAddress = (cpu.MR.FFV & MASK15) << 3;
+                    fltAddress = (cpu_p->MR.FFV & MASK15) << 3;
                   }
 #endif
 
                 // absolute address of fault YPair
-                word24 addr = fltAddress + 2 * cpu.faultNumber;
+                word24 addr = fltAddress + 2 * cpu_p->faultNumber;
   
-                core_read2 (addr, & cpu.cu.IWB, & cpu.cu.IRODD, __func__);
-                cpu.cu.xde = 1;
-                cpu.cu.xdo = 1;
+                core_read2 (cpu_p, addr, & cpu_p->cu.IWB, & cpu_p->cu.IRODD, __func__);
+                cpu_p->cu.xde = 1;
+                cpu_p->cu.xdo = 1;
 
                 CPT (cpt1U, 33); // set fault exec cycle
-                set_cpu_cycle (FAULT_EXEC_cycle);
+                set_cpu_cycle (cpu_p, FAULT_EXEC_cycle);
 
                 break;
               }
 
 
-          }  // switch (cpu.cycle)
+          }  // switch (cpu_p->cycle)
       } 
 #ifdef ROUND_ROBIN
     while (0);
@@ -2541,15 +2545,15 @@ leave:
 #ifdef HDBG
     hdbgPrint ();
 #endif
-    sim_msg ("\ncycles = %llu\n", cpu.cycleCnt);
-    sim_msg ("\ninstructions = %llu\n", cpu.instrCnt);
+    sim_msg ("\ncycles = %llu\n", cpu_p->cycleCnt);
+    sim_msg ("\ninstructions = %llu\n", cpu_p->instrCnt);
 
 #if 0
     for (int i = 0; i < N_FAULTS; i ++)
       {
-        if (cpu.faultCnt [i])
+        if (cpu_p->faultCnt [i])
           sim_msg  ("%s faults = %ld\n",
-                      faultNames [i], cpu.faultCnt [i]);
+                      faultNames [i], cpu_p->faultCnt [i]);
       }
 #endif
 
@@ -2563,7 +2567,7 @@ leave:
 // restarting sim_instr doesn't lose the place.
 
     set_cpu_idx (0);
-    dummy_IC = cpu.PPR.IC;
+    dummy_IC = cpu_p->PPR.IC;
 #endif
 
     return reason;
@@ -2587,9 +2591,9 @@ request.
 
  */
 
-int operand_size (void)
+int operand_size (cpu_state_t *cpu_p)
   {
-    DCDstruct * i = & cpu.currentInstruction;
+    DCDstruct * i = & cpu_p->currentInstruction;
     if (i->info->flags & (READ_OPERAND | STORE_OPERAND))
         return 1;
     else if (i->info->flags & (READ_YPAIR | STORE_YPAIR))
@@ -2605,14 +2609,14 @@ int operand_size (void)
 
 // read instruction operands
 
-t_stat read_operand (word18 addr, processor_cycle_type cyctyp)
+t_stat read_operand (cpu_state_t *cpu_p, word18 addr, processor_cycle_type cyctyp)
   {
     CPT (cpt1L, 6); // read_operand
 
 #ifdef THREADZ
     if (cyctyp == OPERAND_READ)
       {
-        DCDstruct * i = & cpu.currentInstruction;
+        DCDstruct * i = & cpu_p->currentInstruction;
 #if 1
         if (RMWOP (i))
 #else
@@ -2628,36 +2632,36 @@ t_stat read_operand (word18 addr, processor_cycle_type cyctyp)
       }
 #endif
 
-    switch (operand_size ())
+    switch (operand_size (cpu_p))
       {
         case 1:
             CPT (cpt1L, 7); // word
-            Read (addr, & cpu.CY, cyctyp);
+            Read (cpu_p, addr, & cpu_p->CY, cyctyp);
             return SCPE_OK;
         case 2:
             CPT (cpt1L, 8); // double word
             addr &= 0777776;   // make even
-            Read2 (addr, cpu.Ypair, cyctyp);
+            Read2 (cpu_p, addr, cpu_p->Ypair, cyctyp);
             break;
         case 8:
             CPT (cpt1L, 9); // oct word
             addr &= 0777770;   // make on 8-word boundary
-            Read8 (addr, cpu.Yblock8, false);
+            Read8 (cpu_p, addr, cpu_p->Yblock8, false);
             break;
         case 16:
             CPT (cpt1L, 10); // 16 words
             addr &= 0777770;   // make on 8-word boundary
-            Read16 (addr, cpu.Yblock16);
+            Read16 (cpu_p, addr, cpu_p->Yblock16);
             break;
         case 32:
             CPT (cpt1L, 11); // 32 words
             addr &= 0777740;   // make on 32-word boundary
             for (uint j = 0 ; j < 32 ; j += 1)
-                Read (addr + j, cpu.Yblock32 + j, cyctyp);
+	        Read (cpu_p, addr + j, cpu_p->Yblock32 + j, cyctyp);
             
             break;
       }
-    //cpu.TPR.CA = addr;  // restore address
+    //cpu_p->TPR.CA = addr;  // restore address
     
     return SCPE_OK;
 
@@ -2665,42 +2669,42 @@ t_stat read_operand (word18 addr, processor_cycle_type cyctyp)
 
 // write instruction operands
 
-t_stat write_operand (word18 addr, UNUSED processor_cycle_type cyctyp)
+t_stat write_operand (cpu_state_t *cpu_p, word18 addr, UNUSED processor_cycle_type cyctyp)
   {
-    switch (operand_size ())
+    switch (operand_size (cpu_p))
       {
         case 1:
             CPT (cpt1L, 12); // word
-            Write (addr, cpu.CY, OPERAND_STORE);
+            Write (cpu_p, addr, cpu_p->CY, OPERAND_STORE);
             break;
         case 2:
             CPT (cpt1L, 13); // double word
             addr &= 0777776;   // make even
-            Write2 (addr + 0, cpu.Ypair, OPERAND_STORE);
+            Write2 (cpu_p, addr + 0, cpu_p->Ypair, OPERAND_STORE);
             break;
         case 8:
             CPT (cpt1L, 14); // 8 words
             addr &= 0777770;   // make on 8-word boundary
-            Write8 (addr, cpu.Yblock8, false);
+            Write8 (cpu_p, addr, cpu_p->Yblock8, false);
             break;
         case 16:
             CPT (cpt1L, 15); // 16 words
             addr &= 0777770;   // make on 8-word boundary
-            Write16 (addr, cpu.Yblock16);
+            Write16 (cpu_p, addr, cpu_p->Yblock16);
             break;
         case 32:
             CPT (cpt1L, 16); // 32 words
             addr &= 0777740;   // make on 32-word boundary
             //for (uint j = 0 ; j < 32 ; j += 1)
-                //Write (addr + j, cpu.Yblock32[j], OPERAND_STORE);
-            Write32 (addr, cpu.Yblock32);
+                //Write (addr + j, cpu_p->Yblock32[j], OPERAND_STORE);
+            Write32 (cpu_p, addr, cpu_p->Yblock32);
             break;
       }
     
 #ifdef THREADZ
     if (cyctyp == OPERAND_STORE)
       {
-        DCDstruct * i = & cpu.currentInstruction;
+        DCDstruct * i = & cpu_p->currentInstruction;
         if (RMWOP (i))
           unlock_mem ();
       }
@@ -2773,14 +2777,14 @@ static uint get_scu_unit_idx (word24 addr, word24 * offset)
 #endif
 
 #if !defined(SPEED) || !defined(INLINE_CORE)
-int32 core_read (word24 addr, word36 *data, const char * ctx)
+int32 core_read (cpu_state_t *cpu_p, word24 addr, word36 *data, const char * ctx)
   {
-    PNL (cpu.portBusy = true;)
+    PNL (cpu_p->portBusy = true;)
 #ifdef ISOLTS
-    if (cpu.switches.useMap)
+    if (cpu_p->switches.useMap)
       {
         uint pgnum = addr / SCBANK;
-        int os = cpu.scbank_pg_os [pgnum];
+        int os = cpu_p->scbank_pg_os [pgnum];
         if (os < 0)
           {
             doFault (FAULT_STR, fst_str_nea,  __func__);
@@ -2795,15 +2799,15 @@ int32 core_read (word24 addr, word36 *data, const char * ctx)
 
 #if 0 // XXX Controlled by TEST/NORMAL switch
 #ifdef ISOLTS
-    if (cpu.MR.sdpap)
+    if (cpu_p->MR.sdpap)
       {
         sim_warn ("failing to implement sdpap\n");
-        cpu.MR.sdpap = 0;
+        cpu_p->MR.sdpap = 0;
       }
-    if (cpu.MR.separ)
+    if (cpu_p->MR.separ)
       {
         sim_warn ("failing to implement separ\n");
-        cpu.MR.separ = 0;
+        cpu_p->MR.separ = 0;
       }
 #endif
 #endif
@@ -2816,7 +2820,7 @@ int32 core_read (word24 addr, word36 *data, const char * ctx)
     if (watch_bits [addr])
       {
         sim_msg ("WATCH [%"PRId64"] %05o:%06o read   %08o %012"PRIo64" "
-                    "(%s)\n", cpu.cycleCnt, cpu.PPR.PSR, cpu.PPR.IC, addr,
+                    "(%s)\n", cpu_p->cycleCnt, cpu_p->PPR.PSR, cpu_p->PPR.IC, addr,
                     * data, ctx);
       }
 #else
@@ -2826,7 +2830,7 @@ int32 core_read (word24 addr, word36 *data, const char * ctx)
         sim_debug (DBG_WARN, & cpu_dev,
                    "Unitialized memory accessed at address %08o; "
                    "IC is 0%06o:0%06o (%s(\n",
-                   addr, cpu.PPR.PSR, cpu.PPR.IC, ctx);
+                   addr, cpu_p->PPR.PSR, cpu_p->PPR.IC, ctx);
       }
 #endif
 #ifndef SPEED
@@ -2834,7 +2838,7 @@ int32 core_read (word24 addr, word36 *data, const char * ctx)
       {
         sim_msg ("WATCH [%"PRId64"] %05o:%06o read   %08o %012"PRIo64" "
                     "(%s)\n",
-                    cpu.cycleCnt, cpu.PPR.PSR, cpu.PPR.IC, addr, M [addr],
+                    cpu_p->cycleCnt, cpu_p->PPR.PSR, cpu_p->PPR.IC, addr, M [addr],
                     ctx);
         traceInstruction (0);
       }
@@ -2851,7 +2855,7 @@ int32 core_read (word24 addr, word36 *data, const char * ctx)
 
 #endif
 #ifdef TR_WORK_MEM
-    cpu.rTRticks ++;
+    cpu_p->rTRticks ++;
 #endif
     sim_debug (DBG_CORE, & cpu_dev,
                "core_read  %08o %012"PRIo64" (%s)\n",
@@ -2862,13 +2866,13 @@ int32 core_read (word24 addr, word36 *data, const char * ctx)
 #endif
 
 #ifdef LOCKLESS
-int32 core_read_lock (word24 addr, word36 *data, const char * ctx)
+int32 core_read_lock (cpu_state_t *cpu_p, word24 addr, word36 *data, const char * ctx)
 {
 #ifdef ISOLTS
-    if (cpu.switches.useMap)
+    if (cpu_p->switches.useMap)
       {
         uint pgnum = addr / SCBANK;
-        int os = cpu.scbank_pg_os [pgnum];
+        int os = cpu_p->scbank_pg_os [pgnum];
         if (os < 0)
           {
             doFault (FAULT_STR, fst_str_nea,  __func__);
@@ -2881,11 +2885,11 @@ int32 core_read_lock (word24 addr, word36 *data, const char * ctx)
       nem_check (addr,  "core_read nem");
 #endif
     LOCK_CORE_WORD(addr);
-    if (cpu.locked_addr != 0) {
-      sim_warn ("core_read_lock: locked %x addr %x\n", cpu.locked_addr, addr);
-      core_unlock_all();
+    if (cpu_p->locked_addr != 0) {
+      sim_warn ("core_read_lock: locked %x addr %x\n", cpu_p->locked_addr, addr);
+      core_unlock_all(cpu_p);
     }
-    cpu.locked_addr = addr;
+    cpu_p->locked_addr = addr;
     word36 v;
     LOAD_ACQ_CORE_WORD(v, addr);
     * data = v & DMASK;
@@ -2894,14 +2898,14 @@ int32 core_read_lock (word24 addr, word36 *data, const char * ctx)
 #endif
 
 #if !defined(SPEED) || !defined(INLINE_CORE)
-int core_write (word24 addr, word36 data, const char * ctx)
+int core_write (cpu_state_t *cpu_p, word24 addr, word36 data, const char * ctx)
   {
-    PNL (cpu.portBusy = true;)
+    PNL (cpu_p->portBusy = true;)
 #ifdef ISOLTS
-    if (cpu.switches.useMap)
+    if (cpu_p->switches.useMap)
       {
         uint pgnum = addr / SCBANK;
-        int os = cpu.scbank_pg_os [pgnum];
+        int os = cpu_p->scbank_pg_os [pgnum];
         if (os < 0)
           {
             doFault (FAULT_STR, fst_str_nea,  __func__);
@@ -2914,15 +2918,15 @@ int core_write (word24 addr, word36 data, const char * ctx)
       nem_check (addr,  "core_write nem");
 #endif
 #ifdef ISOLTS
-    if (cpu.MR.sdpap)
+    if (cpu_p->MR.sdpap)
       {
         sim_warn ("failing to implement sdpap\n");
-        cpu.MR.sdpap = 0;
+        cpu_p->MR.sdpap = 0;
       }
-    if (cpu.MR.separ)
+    if (cpu_p->MR.separ)
       {
         sim_warn ("failing to implement separ\n");
-        cpu.MR.separ = 0;
+        cpu_p->MR.separ = 0;
       }
 #endif
 #ifdef SCUMEM
@@ -2934,7 +2938,7 @@ int core_write (word24 addr, word36 data, const char * ctx)
     if (watch_bits [addr])
       {
         sim_msg ("WATCH [%"PRId64"] %05o:%06o write   %08o %012"PRIo64" "
-                    "(%s)\n", cpu.cycleCnt, cpu.PPR.PSR, cpu.PPR.IC, addr, 
+                    "(%s)\n", cpu_p->cycleCnt, cpu_p->PPR.PSR, cpu_p->PPR.IC, addr, 
                     scu[sci_unit_idx].M[offset], ctx);
       }
 #else
@@ -2950,14 +2954,14 @@ int core_write (word24 addr, word36 data, const char * ctx)
     if (watch_bits [addr])
       {
         sim_msg ("WATCH [%"PRId64"] %05o:%06o write  %08o %012"PRIo64" "
-                    "(%s)\n", cpu.cycleCnt, cpu.PPR.PSR, cpu.PPR.IC, addr, 
+                    "(%s)\n", cpu_p->cycleCnt, cpu_p->PPR.PSR, cpu_p->PPR.IC, addr, 
                     M [addr], ctx);
         traceInstruction (0);
       }
 #endif
 #endif
 #ifdef TR_WORK_MEM
-    cpu.rTRticks ++;
+    cpu_p->rTRticks ++;
 #endif
     sim_debug (DBG_CORE, & cpu_dev,
                "core_write %08o %012"PRIo64" (%s)\n",
@@ -2968,13 +2972,13 @@ int core_write (word24 addr, word36 data, const char * ctx)
 #endif
 
 #ifdef LOCKLESS
-int core_write_unlock (word24 addr, word36 data, const char * ctx)
+int core_write_unlock (cpu_state_t *cpu_p, word24 addr, word36 data, const char * ctx)
 {
 #ifdef ISOLTS
-    if (cpu.switches.useMap)
+    if (cpu_p->switches.useMap)
       {
         uint pgnum = addr / SCBANK;
-        int os = cpu.scbank_pg_os [pgnum];
+        int os = cpu_p->scbank_pg_os [pgnum];
         if (os < 0)
           {
             doFault (FAULT_STR, fst_str_nea,  __func__);
@@ -2986,70 +2990,70 @@ int core_write_unlock (word24 addr, word36 data, const char * ctx)
 #ifndef SPEED
       nem_check (addr,  "core_read nem");
 #endif
-    if (cpu.locked_addr != addr)
+    if (cpu_p->locked_addr != addr)
       {
-       sim_warn ("core_write_unlock: locked %x addr %x\n", cpu.locked_addr, addr);
-       core_unlock_all();
+       sim_warn ("core_write_unlock: locked %x addr %x\n", cpu_p->locked_addr, addr);
+       core_unlock_all(cpu_p);
       }
       
     STORE_REL_CORE_WORD(addr, data);
-    cpu.locked_addr = 0;
+    cpu_p->locked_addr = 0;
     return 0;
 }
 
-int core_unlock_all ()
+int core_unlock_all (cpu_state_t *cpu_p)
 {
-  if (cpu.locked_addr != 0) {
-      sim_warn ("core_unlock_all: locked %x\n", cpu.locked_addr);
-      STORE_REL_CORE_WORD(cpu.locked_addr, M[cpu.locked_addr]);
-      cpu.locked_addr = 0;
+  if (cpu_p->locked_addr != 0) {
+      sim_warn ("core_unlock_all: locked %x\n", cpu_p->locked_addr);
+      STORE_REL_CORE_WORD(cpu_p->locked_addr, M[cpu_p->locked_addr]);
+      cpu_p->locked_addr = 0;
   }
   return 0;
 }
 #endif
 
 #if !defined(SPEED) || !defined(INLINE_CORE)
-int core_write_zone (word24 addr, word36 data, const char * ctx)
+int core_write_zone (cpu_state_t *cpu_p, word24 addr, word36 data, const char * ctx)
   {
-    PNL (cpu.portBusy = true;)
+    PNL (cpu_p->portBusy = true;)
 #ifdef ISOLTS
-    if (cpu.MR.sdpap)
+    if (cpu_p->MR.sdpap)
       {
         sim_warn ("failing to implement sdpap\n");
-        cpu.MR.sdpap = 0;
+        cpu_p->MR.sdpap = 0;
       }
-    if (cpu.MR.separ)
+    if (cpu_p->MR.separ)
       {
         sim_warn ("failing to implement separ\n");
-        cpu.MR.separ = 0;
+        cpu_p->MR.separ = 0;
       }
 #endif
 #ifdef SCUMEM
     word24 offset;
     uint sci_unit_idx = get_scu_unit_idx (addr, & offset);
     LOCK_MEM_WR;
-    scu[sci_unit_idx].M[offset] = (scu[sci_unit_idx].M[offset] & ~cpu.zone) |
-                              (data & cpu.zone);
+    scu[sci_unit_idx].M[offset] = (scu[sci_unit_idx].M[offset] & ~cpu_p->zone) |
+                              (data & cpu_p->zone);
     UNLOCK_MEM;
-    cpu.useZone = false; // Safety
+    cpu_p->useZone = false; // Safety
     if (watch_bits [addr])
       {
         sim_msg ("WATCH [%"PRId64"] %05o:%06o writez %08o %012"PRIo64" "
-                    "(%s)\n", cpu.cycleCnt, cpu.PPR.PSR, cpu.PPR.IC, addr, 
+                    "(%s)\n", cpu_p->cycleCnt, cpu_p->PPR.PSR, cpu_p->PPR.IC, addr, 
                     scu[sci_unit_idx].M[offset], ctx);
       }
 #else
 #ifdef LOCKLESS
     word36 v;
-    core_read_lock(addr,  &v, ctx);
-    v = (v & ~cpu.zone) | (data & cpu.zone);
-    core_write_unlock(addr, v, ctx);
+    core_read_lock(cpu_p, addr,  &v, ctx);
+    v = (v & ~cpu_p->zone) | (data & cpu_p->zone);
+    core_write_unlock(cpu_p, addr, v, ctx);
 #else
 #ifdef ISOLTS
-    if (cpu.switches.useMap)
+    if (cpu_p->switches.useMap)
       {
         uint pgnum = addr / SCBANK;
-        int os = cpu.scbank_pg_os [pgnum];
+        int os = cpu_p->scbank_pg_os [pgnum];
         if (os < 0)
           {
             doFault (FAULT_STR, fst_str_nea,  __func__);
@@ -3062,22 +3066,22 @@ int core_write_zone (word24 addr, word36 data, const char * ctx)
       nem_check (addr,  "core_read nem");
 #endif
     LOCK_MEM_WR;
-    M[addr] = (M[addr] & ~cpu.zone) | (data & cpu.zone);
+    M[addr] = (M[addr] & ~cpu_p->zone) | (data & cpu_p->zone);
     UNLOCK_MEM;
 #endif
-    cpu.useZone = false; // Safety
+    cpu_p->useZone = false; // Safety
 #ifndef SPEED
     if (watch_bits [addr])
       {
         sim_msg ("WATCH [%"PRId64"] %05o:%06o writez %08o %012"PRIo64" "
-                    "(%s)\n", cpu.cycleCnt, cpu.PPR.PSR, cpu.PPR.IC, addr, 
+                    "(%s)\n", cpu_p->cycleCnt, cpu_p->PPR.PSR, cpu_p->PPR.IC, addr, 
                     M [addr], ctx);
         traceInstruction (0);
       }
 #endif
 #endif
 #ifdef TR_WORK_MEM
-    cpu.rTRticks ++;
+    cpu_p->rTRticks ++;
 #endif
     sim_debug (DBG_CORE, & cpu_dev,
                "core_write_zone %08o %012"PRIo64" (%s)\n",
@@ -3088,9 +3092,9 @@ int core_write_zone (word24 addr, word36 data, const char * ctx)
 #endif
 
 #if !defined(SPEED) || !defined(INLINE_CORE)
-int core_read2 (word24 addr, word36 *even, word36 *odd, const char * ctx)
+int core_read2 (cpu_state_t *cpu_p, word24 addr, word36 *even, word36 *odd, const char * ctx)
   {
-    PNL (cpu.portBusy = true;)
+    PNL (cpu_p->portBusy = true;)
     if (addr & 1)
       {
         sim_debug (DBG_MSG, & cpu_dev,
@@ -3099,10 +3103,10 @@ int core_read2 (word24 addr, word36 *even, word36 *odd, const char * ctx)
         addr &= (word24)~1; /* make it an even address */
       }
 #ifdef ISOLTS
-    if (cpu.switches.useMap)
+    if (cpu_p->switches.useMap)
       {
         uint pgnum = addr / SCBANK;
-        int os = cpu.scbank_pg_os [pgnum];
+        int os = cpu_p->scbank_pg_os [pgnum];
         if (os < 0)
           {
             doFault (FAULT_STR, fst_str_nea,  __func__);
@@ -3117,15 +3121,15 @@ int core_read2 (word24 addr, word36 *even, word36 *odd, const char * ctx)
 
 #if 0 // XXX Controlled by TEST/NORMAL switch
 #ifdef ISOLTS
-    if (cpu.MR.sdpap)
+    if (cpu_p->MR.sdpap)
       {
         sim_warn ("failing to implement sdpap\n");
-        cpu.MR.sdpap = 0;
+        cpu_p->MR.sdpap = 0;
       }
-    if (cpu.MR.separ)
+    if (cpu_p->MR.separ)
       {
         sim_warn ("failing to implement separ\n");
-        cpu.MR.separ = 0;
+        cpu_p->MR.separ = 0;
       }
 #endif
 #endif
@@ -3139,7 +3143,7 @@ int core_read2 (word24 addr, word36 *even, word36 *odd, const char * ctx)
     if (watch_bits [addr])
       {
         sim_msg ("WATCH [%"PRId64"] %05o:%06o read2  %08o %012"PRIo64" "
-                    "(%s)\n", cpu.cycleCnt, cpu.PPR.PSR, cpu.PPR.IC, addr,
+                    "(%s)\n", cpu_p->cycleCnt, cpu_p->PPR.PSR, cpu_p->PPR.IC, addr,
                     * even, ctx);
       }
 #endif
@@ -3154,7 +3158,7 @@ int core_read2 (word24 addr, word36 *even, word36 *odd, const char * ctx)
     if (watch_bits [addr+1])
       {
         sim_msg ("WATCH [%"PRId64"] %05o:%06o read2  %08o %012"PRIo64" "
-                    "(%s)\n", cpu.cycleCnt, cpu.PPR.PSR, cpu.PPR.IC, addr+1,
+                    "(%s)\n", cpu_p->cycleCnt, cpu_p->PPR.PSR, cpu_p->PPR.IC, addr+1,
                     * odd, ctx);
       }
 #endif
@@ -3169,14 +3173,14 @@ int core_read2 (word24 addr, word36 *even, word36 *odd, const char * ctx)
         sim_debug (DBG_WARN, & cpu_dev,
                    "Unitialized memory accessed at address %08o; "
                    "IC is 0%06o:0%06o (%s)\n",
-                   addr, cpu.PPR.PSR, cpu.PPR.IC, ctx);
+                   addr, cpu_p->PPR.PSR, cpu_p->PPR.IC, ctx);
       }
 #endif
 #ifndef SPEED
     if (watch_bits [addr])
       {
         sim_msg ("WATCH [%"PRId64"] %05o:%06o read2  %08o %012"PRIo64" "
-                    "(%s)\n", cpu.cycleCnt, cpu.PPR.PSR, cpu.PPR.IC, addr, 
+                    "(%s)\n", cpu_p->cycleCnt, cpu_p->PPR.PSR, cpu_p->PPR.IC, addr, 
                     M [addr], ctx);
         traceInstruction (0);
       }
@@ -3205,14 +3209,14 @@ int core_read2 (word24 addr, word36 *even, word36 *odd, const char * ctx)
         sim_debug (DBG_WARN, & cpu_dev,
                    "Unitialized memory accessed at address %08o; "
                    "IC is 0%06o:0%06o (%s)\n",
-                    addr, cpu.PPR.PSR, cpu.PPR.IC, ctx);
+                    addr, cpu_p->PPR.PSR, cpu_p->PPR.IC, ctx);
       }
 #endif
 #ifndef SPEED
     if (watch_bits [addr])
       {
         sim_msg ("WATCH [%"PRId64"] %05o:%06o read2  %08o %012"PRIo64" "
-                    "(%s)\n", cpu.cycleCnt, cpu.PPR.PSR, cpu.PPR.IC, addr,
+                    "(%s)\n", cpu_p->cycleCnt, cpu_p->PPR.PSR, cpu_p->PPR.IC, addr,
                     M [addr], ctx);
         traceInstruction (0);
       }
@@ -3232,7 +3236,7 @@ int core_read2 (word24 addr, word36 *even, word36 *odd, const char * ctx)
                 addr, * odd, ctx);
 #endif
 #ifdef TR_WORK_MEM
-    cpu.rTRticks ++;
+    cpu_p->rTRticks ++;
 #endif
     PNL (trackport (addr - 1, * even));
     return 0;
@@ -3240,9 +3244,9 @@ int core_read2 (word24 addr, word36 *even, word36 *odd, const char * ctx)
 #endif
 
 #if !defined(SPEED) || !defined(INLINE_CORE)
-int core_write2 (word24 addr, word36 even, word36 odd, const char * ctx)
+int core_write2 (cpu_state_t *cpu_p, word24 addr, word36 even, word36 odd, const char * ctx)
   {
-    PNL (cpu.portBusy = true;)
+    PNL (cpu_p->portBusy = true;)
     if (addr & 1)
       {
         sim_debug (DBG_MSG, & cpu_dev,
@@ -3251,10 +3255,10 @@ int core_write2 (word24 addr, word36 even, word36 odd, const char * ctx)
         addr &= (word24)~1; /* make it even a dress, or iron a skirt ;) */
       }
 #ifdef ISOLTS
-    if (cpu.switches.useMap)
+    if (cpu_p->switches.useMap)
       {
         uint pgnum = addr / SCBANK;
-        int os = cpu.scbank_pg_os [pgnum];
+        int os = cpu_p->scbank_pg_os [pgnum];
         if (os < 0)
           {
             doFault (FAULT_STR, fst_str_nea,  __func__);
@@ -3267,15 +3271,15 @@ int core_write2 (word24 addr, word36 even, word36 odd, const char * ctx)
       nem_check (addr,  "core_write2 nem");
 #endif
 #ifdef ISOLTS
-    if (cpu.MR.sdpap)
+    if (cpu_p->MR.sdpap)
       {
         sim_warn ("failing to implement sdpap\n");
-        cpu.MR.sdpap = 0;
+        cpu_p->MR.sdpap = 0;
       }
-    if (cpu.MR.separ)
+    if (cpu_p->MR.separ)
       {
         sim_warn ("failing to implement separ\n");
-        cpu.MR.separ = 0;
+        cpu_p->MR.separ = 0;
       }
 #endif
 
@@ -3286,7 +3290,7 @@ int core_write2 (word24 addr, word36 even, word36 odd, const char * ctx)
     if (watch_bits [addr])
       {
         sim_msg ("WATCH [%"PRId64"] %05o:%06o write2 %08o %012"PRIo64" "
-                    "(%s)\n", cpu.cycleCnt, cpu.PPR.PSR, cpu.PPR.IC, addr,
+                    "(%s)\n", cpu_p->cycleCnt, cpu_p->PPR.PSR, cpu_p->PPR.IC, addr,
                     even, ctx);
       }
     LOCK_MEM_WR;
@@ -3295,7 +3299,7 @@ int core_write2 (word24 addr, word36 even, word36 odd, const char * ctx)
     if (watch_bits [addr+1])
       {
         sim_msg ("WATCH [%"PRId64"] %05o:%06o write2 %08o %012"PRIo64" "
-                    "(%s)\n", cpu.cycleCnt, cpu.PPR.PSR, cpu.PPR.IC, addr+1,
+                    "(%s)\n", cpu_p->cycleCnt, cpu_p->PPR.PSR, cpu_p->PPR.IC, addr+1,
                     odd, ctx);
       }
 #else
@@ -3303,7 +3307,7 @@ int core_write2 (word24 addr, word36 even, word36 odd, const char * ctx)
     if (watch_bits [addr])
       {
         sim_msg ("WATCH [%"PRId64"] %05o:%06o write2 %08o %012"PRIo64" "
-                    "(%s)\n", cpu.cycleCnt, cpu.PPR.PSR, cpu.PPR.IC, addr,
+                    "(%s)\n", cpu_p->cycleCnt, cpu_p->PPR.PSR, cpu_p->PPR.IC, addr,
                     even, ctx);
         traceInstruction (0);
       }
@@ -3328,7 +3332,7 @@ int core_write2 (word24 addr, word36 even, word36 odd, const char * ctx)
     if (watch_bits [addr])
       {
         sim_msg ("WATCH [%"PRId64"] %05o:%06o write2 %08o %012"PRIo64" "
-                    "(%s)\n", cpu.cycleCnt, cpu.PPR.PSR, cpu.PPR.IC, addr,
+                    "(%s)\n", cpu_p->cycleCnt, cpu_p->PPR.PSR, cpu_p->PPR.IC, addr,
                     odd, ctx);
         traceInstruction (0);
       }
@@ -3343,7 +3347,7 @@ int core_write2 (word24 addr, word36 even, word36 odd, const char * ctx)
 #endif
 #endif
 #ifdef TR_WORK_MEM
-    cpu.rTRticks ++;
+    cpu_p->rTRticks ++;
 #endif
     PNL (trackport (addr - 1, even));
     sim_debug (DBG_CORE, & cpu_dev,
@@ -3365,7 +3369,7 @@ int core_write2 (word24 addr, word36 even, word36 odd, const char * ctx)
  *
  */
 
-void decode_instruction (word36 inst, DCDstruct * p)
+void decode_instruction (cpu_state_t *cpu_p, word36 inst, DCDstruct * p)
   {
     CPT (cpt1L, 17); // instruction decoder
     memset (p, 0, sizeof (DCDstruct));
@@ -3389,14 +3393,14 @@ void decode_instruction (word36 inst, DCDstruct * p)
         p->tag = 0;
         if (p->info->ndes > 1)
           {
-            memset (& cpu.currentEISinstruction, 0,
-                    sizeof (cpu.currentEISinstruction)); 
+            memset (& cpu_p->currentEISinstruction, 0,
+                    sizeof (cpu_p->currentEISinstruction)); 
           }
       }
 
     // Save the RFI
-    p->restart = cpu.cu.rfi != 0;
-    cpu.cu.rfi = 0;
+    p->restart = cpu_p->cu.rfi != 0;
+    cpu_p->cu.rfi = 0;
     if (p->restart)
       {
         sim_debug (DBG_TRACE, & cpu_dev, "restart\n");
@@ -3422,19 +3426,19 @@ void decode_instruction (word36 inst, DCDstruct * p)
 // procedure is 1; otherwise, its value is 0.
 //
  
-int is_priv_mode (void)
+int is_priv_mode (cpu_state_t *cpu_p)
   {
     
 // Back when it was ABS/APP/BAR, this test was right; now that
 // it is ABS/APP,BAR/NBAR, check bar mode.
 // Fixes ISOLTS 890 05a.
-    if (get_bar_mode ())
+    if (get_bar_mode (cpu_p))
       return 0;
 
 // PPR.P is only relevant if we're in APPEND mode. ABSOLUTE mode ignores it.
-    if (get_addr_mode () == ABSOLUTE_mode)
+    if (get_addr_mode (cpu_p) == ABSOLUTE_mode)
       return 1;
-    else if (cpu.PPR.P)
+    else if (cpu_p->PPR.P)
       return 1;
 
     return 0;
@@ -3448,20 +3452,20 @@ int is_priv_mode (void)
  * direct us to ignore the I_NBAR indicator register.
  */
 
-bool get_bar_mode (void)
+bool get_bar_mode (cpu_state_t *cpu_p)
   {
-    return ! (cpu.secret_addressing_mode || TST_I_NBAR);
+    return ! (cpu_p->secret_addressing_mode || TST_I_NBAR);
   }
 
-addr_modes_e get_addr_mode (void)
+addr_modes_e get_addr_mode (cpu_state_t *cpu_p)
   {
-    if (cpu.secret_addressing_mode)
+    if (cpu_p->secret_addressing_mode)
         return ABSOLUTE_mode; // This is not the mode you are looking for
 
     // went_appending does not alter privileged state (only enables appending)
     // the went_appending check is only required by ABSA, AFAICT
     // pft 02b 013255, ISOLTS-860
-    //if (cpu.went_appending)
+    //if (cpu_p->went_appending)
     //    return APPEND_mode;
 
     if (TST_I_ABS)
@@ -3483,11 +3487,11 @@ addr_modes_e get_addr_mode (void)
  *
  */
 
-void set_addr_mode (addr_modes_e mode)
+void set_addr_mode (cpu_state_t *cpu_p, addr_modes_e mode)
   {
-//    cpu.cu.XSF = false;
+//    cpu_p->cu.XSF = false;
 //sim_debug (DBG_TRACEEXT, & cpu_dev, "set_addr_mode bit 29 sets XSF to 0\n");
-    //cpu.went_appending = false;
+    //cpu_p->went_appending = false;
 // Temporary hack to fix fault/intr pair address mode state tracking
 //   1. secret_addressing_mode is only set in fault/intr pair processing.
 //   2. Assume that the only set_addr_mode that will occur is the b29 special
@@ -3495,14 +3499,14 @@ void set_addr_mode (addr_modes_e mode)
     //if (secret_addressing_mode && mode == APPEND_mode)
       //set_went_appending ();
 
-    cpu.secret_addressing_mode = false;
+    cpu_p->secret_addressing_mode = false;
     if (mode == ABSOLUTE_mode)
       {
         CPT (cpt1L, 22); // set abs mode
         sim_debug (DBG_DEBUG, & cpu_dev, "APU: Setting absolute mode.\n");
 
         SET_I_ABS;
-        cpu.PPR.P = 1;
+        cpu_p->PPR.P = 1;
         
       }
     else if (mode == APPEND_mode)
@@ -3550,9 +3554,9 @@ void set_addr_mode (addr_modes_e mode)
  */
 
 // CANFAULT
-word18 get_BAR_address (word18 addr)
+word18 get_BAR_address (cpu_state_t *cpu_p, word18 addr)
   {
-    if (cpu . BAR.BOUND == 0)
+    if (cpu_p->BAR.BOUND == 0)
         // store fault, out of bounds.
         doFault (FAULT_STR, fst_str_oob, "BAR store fault; out of bounds");
 
@@ -3565,43 +3569,43 @@ word18 get_BAR_address (word18 addr)
     // BAR.BOUND <= CA
     // CA >= BAR.BOUND
     //
-    if (addr >= (((word18) cpu . BAR.BOUND) << 9))
+    if (addr >= (((word18) cpu_p->BAR.BOUND) << 9))
         // store fault, out of bounds.
         doFault (FAULT_STR, fst_str_oob, "BAR store fault; out of bounds");
     
-    word18 barAddr = (addr + (((word18) cpu . BAR.BASE) << 9)) & 0777777;
+    word18 barAddr = (addr + (((word18) cpu_p->BAR.BASE) << 9)) & 0777777;
     return barAddr;
   }
 
 //=============================================================================
 
-static void add_history (uint hset, word36 w0, word36 w1)
+static void add_history (cpu_state_t *cpu_p, uint hset, word36 w0, word36 w1)
   {
-    //if (cpu.MR.emr)
+    //if (cpu_p->MR.emr)
       {
-        cpu.history [hset] [cpu.history_cyclic[hset]] [0] = w0;
-        cpu.history [hset] [cpu.history_cyclic[hset]] [1] = w1;
-        cpu.history_cyclic[hset] = (cpu.history_cyclic[hset] + 1) % N_HIST_SIZE;
+        cpu_p->history [hset] [cpu_p->history_cyclic[hset]] [0] = w0;
+        cpu_p->history [hset] [cpu_p->history_cyclic[hset]] [1] = w1;
+        cpu_p->history_cyclic[hset] = (cpu_p->history_cyclic[hset] + 1) % N_HIST_SIZE;
       }
   }
 
-void add_history_force (uint hset, word36 w0, word36 w1)
+void add_history_force (cpu_state_t *cpu_p, uint hset, word36 w0, word36 w1)
   {
-    cpu.history [hset] [cpu.history_cyclic[hset]] [0] = w0;
-    cpu.history [hset] [cpu.history_cyclic[hset]] [1] = w1;
-    cpu.history_cyclic[hset] = (cpu.history_cyclic[hset] + 1) % N_HIST_SIZE;
+    cpu_p->history [hset] [cpu_p->history_cyclic[hset]] [0] = w0;
+    cpu_p->history [hset] [cpu_p->history_cyclic[hset]] [1] = w1;
+    cpu_p->history_cyclic[hset] = (cpu_p->history_cyclic[hset] + 1) % N_HIST_SIZE;
   }
 
 #ifdef DPS8M
-void add_CU_history (void)
+void add_CU_history (cpu_state_t *cpu_p)
   {
-    if (cpu.skip_cu_hist)
+    if (cpu_p->skip_cu_hist)
       return;
-    if (! cpu.MR_cache.emr)
+    if (! cpu_p->MR_cache.emr)
       return;
-    if (! cpu.MR_cache.ihr)
+    if (! cpu_p->MR_cache.ihr)
       return;
-    if (cpu.MR_cache.hrxfr && ! cpu.wasXfer)
+    if (cpu_p->MR_cache.hrxfr && ! cpu_p->wasXfer)
       return;
 
     word36 flags = 0; // XXX fill out
@@ -3610,22 +3614,22 @@ void add_CU_history (void)
     word36 w0 = 0, w1 = 0;
     w0 |= flags & 0777777000000;
     w0 |= IWB_IRODD & MASK18;
-    w1 |= (cpu.iefpFinalAddress & MASK24) << 12;
+    w1 |= (cpu_p->iefpFinalAddress & MASK24) << 12;
     w1 |= (proccmd & MASK5) << 7;
     w1 |= flags2 & 0176;
-    add_history (CU_HIST_REG, w0, w1);
+    add_history (cpu_p, CU_HIST_REG, w0, w1);
   }
 
-void add_DUOU_history (word36 flags, word18 ICT, word9 RS_REG, word9 flags2)
+void add_DUOU_history (cpu_state_t *cpu_p, word36 flags, word18 ICT, word9 RS_REG, word9 flags2)
   {
     word36 w0 = flags, w1 = 0;
     w1 |= (ICT & MASK18) << 18;
     w1 |= (RS_REG & MASK9) << 9;
     w1 |= flags2 & MASK9;
-    add_history (DU_OU_HIST_REG, w0, w1);
+    add_history (cpu_p, DU_OU_HIST_REG, w0, w1);
   }
 
-void add_APU_history (word15 ESN, word21 flags, word24 RMA, word3 RTRR, word9 flags2)
+void add_APU_history (cpu_state_t *cpu_p, word15 ESN, word21 flags, word24 RMA, word3 RTRR, word9 flags2)
   {
     word36 w0 = 0, w1 = 0;
     w0 |= (ESN & MASK15) << 21;
@@ -3633,19 +3637,19 @@ void add_APU_history (word15 ESN, word21 flags, word24 RMA, word3 RTRR, word9 fl
     w1 |= (RMA & MASK24) << 12;
     w1 |= (RTRR & MASK3) << 9;
     w1 |= flags2 & MASK9;
-    add_history (APU_HIST_REG, w0, w1);
+    add_history (cpu_p, APU_HIST_REG, w0, w1);
   }
 
-void add_EAPU_history (word18 ZCA, word18 opcode)
+void add_EAPU_history (cpu_state_t *cpu_p, word18 ZCA, word18 opcode)
   {
     word36 w0 = 0;
     w0 |= (ZCA & MASK18) << 18;
     w0 |= opcode & MASK18;
-    add_history (EAPU_HIST_REG, w0, 0);
-    //cpu.eapu_hist[cpu.eapu_cyclic].ZCA = ZCA;
-    //cpu.eapu_hist[cpu.eapu_cyclic].opcode = opcode;
-    //cpu.history_cyclic[EAPU_HIST_REG] =
-      //(cpu.history_cyclic[EAPU_HIST_REG] + 1) % N_HIST_SIZE;
+    add_history (cpu_p, EAPU_HIST_REG, w0, 0);
+    //cpu_p->eapu_hist[cpu_p->eapu_cyclic].ZCA = ZCA;
+    //cpu_p->eapu_hist[cpu_p->eapu_cyclic].opcode = opcode;
+    //cpu_p->history_cyclic[EAPU_HIST_REG] =
+      //(cpu_p->history_cyclic[EAPU_HIST_REG] + 1) % N_HIST_SIZE;
   }
 #endif // DPS8M
 
@@ -3685,15 +3689,15 @@ void add_EAPU_history (word18 ZCA, word18 opcode)
 //  46 -PC BUSY
 //  47 PORT BUSY
 
-void add_CU_history (void)
+void add_CU_history (cpu_state_t *cpu_p)
   {
     CPT (cpt1L, 24); // add cu hist
 // XXX strobe on opcode match
-    if (cpu.skip_cu_hist)
+    if (cpu_p->skip_cu_hist)
       return;
-    if (! cpu.MR_cache.emr)
+    if (! cpu_p->MR_cache.emr)
       return;
-    if (! cpu.MR_cache.ihr)
+    if (! cpu_p->MR_cache.ihr)
       return;
 
     word36 w0 = 0, w1 = 0;
@@ -3706,41 +3710,41 @@ void add_CU_history (void)
     // 5 PON
     // 6 RAW
     // 7 SAW
-    PNL (putbits36_8 (& w0, 0, cpu.prepare_state);)
+    PNL (putbits36_8 (& w0, 0, cpu_p->prepare_state);)
     // 8 TRG 
-    putbits36_1 (& w0, 8, cpu.wasXfer);
+    putbits36_1 (& w0, 8, cpu_p->wasXfer);
     // 9 XDE
-    putbits36_1 (& w0, 9, cpu.cu.xde);
+    putbits36_1 (& w0, 9, cpu_p->cu.xde);
     // 10 XDO
-    putbits36_1 (& w0, 10, cpu.cu.xdo);
+    putbits36_1 (& w0, 10, cpu_p->cu.xdo);
     // 11 IC
     putbits36_1 (& w0, 11, USE_IRODD?1:0);
     // 12 RPT
-    putbits36_1 (& w0, 12, cpu.cu.rpt);
+    putbits36_1 (& w0, 12, cpu_p->cu.rpt);
     // 13 WI Wait for instruction fetch XXX Not tracked
     // 14 ARF "AR F/E" Address register Full/Empty Address has valid data 
-    PNL (putbits36_1 (& w0, 14, cpu.AR_F_E);)
+    PNL (putbits36_1 (& w0, 14, cpu_p->AR_F_E);)
     // 15 !XA/Z "-XIP NOT prepare interrupt address" 
-    putbits36_1 (& w0, 15, cpu.cycle != INTERRUPT_cycle?1:0);
+    putbits36_1 (& w0, 15, cpu_p->cycle != INTERRUPT_cycle?1:0);
     // 16 !FA/Z Not tracked. (cu.-FL?)
-    putbits36_1 (& w0, 16, cpu.cycle != FAULT_cycle?1:0);
+    putbits36_1 (& w0, 16, cpu_p->cycle != FAULT_cycle?1:0);
     // 17 M/S  (master/slave, cu.-BASE?, NOT BAR MODE)
-    putbits36_1 (& w0, 17, TSTF (cpu.cu.IR, I_NBAR)?1:0);
+    putbits36_1 (& w0, 17, TSTF (cpu_p->cu.IR, I_NBAR)?1:0);
     // 18:35 IWR (lower half of IWB)
     putbits36_18 (& w0, 18, (word18) (IWB_IRODD & MASK18));
 
     // 36:53 CA
-    putbits36_18 (& w1, 0, cpu.TPR.CA);
+    putbits36_18 (& w1, 0, cpu_p->TPR.CA);
     // 54:58 CMD system controller command XXX
     // 59:62 SEL port select (XXX ignoring "only valid if port A-D is selected")
-    PNL (putbits36_1 (& w1, 59-36, (cpu.portSelect == 0)?1:0);)
-    PNL (putbits36_1 (& w1, 60-36, (cpu.portSelect == 1)?1:0);)
-    PNL (putbits36_1 (& w1, 61-36, (cpu.portSelect == 2)?1:0);)
-    PNL (putbits36_1 (& w1, 62-36, (cpu.portSelect == 3)?1:0);)
+    PNL (putbits36_1 (& w1, 59-36, (cpu_p->portSelect == 0)?1:0);)
+    PNL (putbits36_1 (& w1, 60-36, (cpu_p->portSelect == 1)?1:0);)
+    PNL (putbits36_1 (& w1, 61-36, (cpu_p->portSelect == 2)?1:0);)
+    PNL (putbits36_1 (& w1, 62-36, (cpu_p->portSelect == 3)?1:0);)
     // 63 XEC-INT An interrupt is present
-    putbits36_1 (& w1, 63-36, cpu.interrupt_flag?1:0);
+    putbits36_1 (& w1, 63-36, cpu_p->interrupt_flag?1:0);
     // 64 INS-FETCH Perform an instruction fetch
-    PNL (putbits36_1 (& w1, 64-36, cpu.INS_FETCH?1:0);)
+    PNL (putbits36_1 (& w1, 64-36, cpu_p->INS_FETCH?1:0);)
     // 65 CU-STORE Control unit store cycle XXX
     // 66 OU-STORE Operations unit store cycle XXX
     // 67 CU-LOAD Control unit load cycle XXX
@@ -3749,16 +3753,16 @@ void add_CU_history (void)
     // 70 -PC-BUSY Port control logic not busy XXX
     // 71 BUSY Port interface busy XXX
 
-    add_history (CU_HIST_REG, w0, w1);
+    add_history (cpu_p, CU_HIST_REG, w0, w1);
 
     // Check for overflow
     CPTUR (cptUseMR);
-    if (cpu.MR.hrhlt && cpu.history_cyclic[CU_HIST_REG] == 0)
+    if (cpu_p->MR.hrhlt && cpu_p->history_cyclic[CU_HIST_REG] == 0)
       {
-        //cpu.history_cyclic[CU_HIST_REG] = 15;
-        if (cpu.MR.ihrrs)
+        //cpu_p->history_cyclic[CU_HIST_REG] = 15;
+        if (cpu_p->MR.ihrrs)
           {
-            cpu.MR.ihr = 0;
+            cpu_p->MR.ihr = 0;
           }
         set_FFV_fault (4);
         return;
@@ -3803,71 +3807,71 @@ void add_CU_history (void)
 // bit 34= finhib-stc1-cx;010bit 70= unused
 // bit 35= unused            bit 71= unused
 
-void add_DU_history (void)
+void add_DU_history (cpu_state_t *cpu_p)
   {
     CPT (cpt1L, 25); // add du hist
-    PNL (add_history (DU_HIST_REG, cpu.du.cycle1, cpu.du.cycle2);)
+    PNL (add_history (DU_HIST_REG, cpu_p->du.cycle1, cpu_p->du.cycle2);)
   }
      
 
-void add_OU_history (void)
+void add_OU_history (cpu_state_t *cpu_p)
   {
     CPT (cpt1L, 26); // add ou hist
     word36 w0 = 0, w1 = 0;
      
     // 0-16 RP
     //   0-8 OP CODE
-    PNL (putbits36_9 (& w0, 0, cpu.ou.RS);)
+    PNL (putbits36_9 (& w0, 0, cpu_p->ou.RS);)
     
     //   9 CHAR
-    putbits36_1 (& w0, 9, cpu.ou.characterOperandSize ? 1 : 0);
+    putbits36_1 (& w0, 9, cpu_p->ou.characterOperandSize ? 1 : 0);
 
     //   10-12 TAG 1/2/3
-    putbits36_3 (& w0, 10, cpu.ou.characterOperandOffset);
+    putbits36_3 (& w0, 10, cpu_p->ou.characterOperandOffset);
 
     //   13 CRFLAG
-    putbits36_1 (& w0, 13, cpu.ou.crflag);
+    putbits36_1 (& w0, 13, cpu_p->ou.crflag);
 
     //   14 DRFLAG
-    putbits36_1 (& w0, 14, cpu.ou.directOperandFlag ? 1 : 0);
+    putbits36_1 (& w0, 14, cpu_p->ou.directOperandFlag ? 1 : 0);
 
     //   15-16 EAC
-    putbits36_2 (& w0, 15, cpu.ou.eac);
+    putbits36_2 (& w0, 15, cpu_p->ou.eac);
 
     // 17 0
     // 18-26 RS REG
-    PNL (putbits36_9 (& w0, 18, cpu.ou.RS);)
+    PNL (putbits36_9 (& w0, 18, cpu_p->ou.RS);)
 
     // 27 RB1 FULL
-    putbits36_1 (& w0, 27, cpu.ou.RB1_FULL);
+    putbits36_1 (& w0, 27, cpu_p->ou.RB1_FULL);
 
     // 28 RP FULL
-    putbits36_1 (& w0, 28, cpu.ou.RP_FULL);
+    putbits36_1 (& w0, 28, cpu_p->ou.RP_FULL);
 
     // 29 RS FULL
-    putbits36_1 (& w0, 29, cpu.ou.RS_FULL);
+    putbits36_1 (& w0, 29, cpu_p->ou.RS_FULL);
 
     // 30-35 GIN/GOS/GD1/GD2/GOE/GOA
-    putbits36_6 (& w0, 30, (word6) (cpu.ou.cycle >> 3));
+    putbits36_6 (& w0, 30, (word6) (cpu_p->ou.cycle >> 3));
 
     // 36-38 GOM/GON/GOF
-    putbits36_3 (& w1, 36-36, (word3) cpu.ou.cycle);
+    putbits36_3 (& w1, 36-36, (word3) cpu_p->ou.cycle);
 
     // 39 STR OP
-    putbits36_1 (& w1, 39-36, cpu.ou.STR_OP);
+    putbits36_1 (& w1, 39-36, cpu_p->ou.STR_OP);
 
     // 40 -DA-AV XXX
 
     // 41-50 stuvwyyzAB -A-REG -Q-REG -X0-REG .. -X7-REG
     PNL (putbits36_10 (& w1, 41-36,
-         (word10) ~opcodes10 [cpu.ou.RS].reg_use);)
+         (word10) ~opcodes10 [cpu_p->ou.RS].reg_use);)
 
     // 51-53 0
 
     // 54-71 ICT TRACKER
-    putbits36_18 (& w1, 54 - 36, cpu.PPR.IC);
+    putbits36_18 (& w1, 54 - 36, cpu_p->PPR.IC);
 
-    add_history (OU_HIST_REG, w0, w1);
+    add_history (cpu_p, OU_HIST_REG, w0, w1);
   }
 
 // According to ISOLTS
@@ -3919,7 +3923,7 @@ void add_OU_history (void)
 // 28 TRR #
 // 29 FLT HLD
 
-void add_APU_history (enum APUH_e op)
+void add_APU_history (cpu_state_t *cpu_p, enum APUH_e op)
   {
     CPT (cpt1L, 28); // add apu hist
     word36 w0 = 0, w1 = 0;
@@ -3927,35 +3931,35 @@ void add_APU_history (enum APUH_e op)
     w0 = op; // set 17-24 FDSPTW/.../FAP bits
 
     // 0-14 ESN 
-    putbits36_15 (& w0, 0, cpu.TPR.TSR);
+    putbits36_15 (& w0, 0, cpu_p->TPR.TSR);
     // 15-16 BSY
-    PNL (putbits36_1 (& w0, 15, (cpu.apu.state & apu_ESN_SNR) ? 1 : 0);)
-    PNL (putbits36_1 (& w0, 16, (cpu.apu.state & apu_ESN_TSR) ? 1 : 0);)
+    PNL (putbits36_1 (& w0, 15, (cpu_p->apu.state & apu_ESN_SNR) ? 1 : 0);)
+    PNL (putbits36_1 (& w0, 16, (cpu_p->apu.state & apu_ESN_TSR) ? 1 : 0);)
     // 25 SDWAMM
-    putbits36_1 (& w0, 25, cpu.cu.SDWAMM);
+    putbits36_1 (& w0, 25, cpu_p->cu.SDWAMM);
     // 26-29 SDWAMR
 #ifdef WAM
-    putbits36_4 (& w0, 26, cpu.SDWAMR);
+    putbits36_4 (& w0, 26, cpu_p->SDWAMR);
 #endif
     // 30 PTWAMM
-    putbits36_1 (& w0, 30, cpu.cu.PTWAMM);
+    putbits36_1 (& w0, 30, cpu_p->cu.PTWAMM);
     // 31-34 PTWAMR
 #ifdef WAM
-    putbits36_4 (& w0, 31, cpu.PTWAMR);
+    putbits36_4 (& w0, 31, cpu_p->PTWAMR);
 #endif
     // 35 FLT
-    PNL (putbits36_1 (& w0, 35, (cpu.apu.state & apu_FLT) ? 1 : 0);)
+    PNL (putbits36_1 (& w0, 35, (cpu_p->apu.state & apu_FLT) ? 1 : 0);)
 
     // 36-59 ADD
-    PNL (putbits36_24 (& w1,  0, cpu.APUMemAddr);)
+    PNL (putbits36_24 (& w1,  0, cpu_p->APUMemAddr);)
     // 60-62 TRR
-    putbits36_3 (& w1, 24, cpu.TPR.TRR);
+    putbits36_3 (& w1, 24, cpu_p->TPR.TRR);
     // 66 XXX Multiple match error in SDWAM
     // 70 Segment is encachable
-    putbits36_1 (& w1, 34, cpu.SDW0.C);
+    putbits36_1 (& w1, 34, cpu_p->SDW0.C);
     // 71 XXX Multiple match error in PTWAM
 
-    add_history (APU_HIST_REG, w0, w1);
+    add_history (cpu_p, APU_HIST_REG, w0, w1);
   }
 
 #endif

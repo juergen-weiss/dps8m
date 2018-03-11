@@ -80,7 +80,7 @@ void check_events (void);
 void clearFaultCycle (void);
 void emCallReportFault (void);
 
-void cu_safe_restore (void);
+//void cu_safe_restore (void);
 
 void doG7Fault(bool allowTR) NO_RETURN;
 

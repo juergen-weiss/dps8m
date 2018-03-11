@@ -119,7 +119,7 @@ static pid_t dps8m_sid; // Session id
 // sim_load not supported
 t_stat sim_load (FILE *fileref, const char *cptr, const char *fnam, int flag)
   {
-    return SCP_UNK;
+    return SCPE_UNK;
   }
 #endif
 
@@ -4288,8 +4288,8 @@ static void http_do_get (char * uri)
                      cpus[i].switches.cpu_num + 'A',
                      cpus[i].switches.serno,
                      (cpus[i].instrCntT1 - cpu.instrCntT0) / 1000000.0,
-                     get_addr_mode () == ABSOLUTE_mode ? "ABS" : "APP",
-                     get_bar_mode () ? "BAR" : "",
+                     get_addr_mode (cpup) == ABSOLUTE_mode ? "ABS" : "APP",
+                     get_bar_mode (cpup) ? "BAR" : "",
                      cpus[i].PPR.PSR,
                      cpus[i].PPR.IC,
                      cpus[i].PPR.PRR,

@@ -9,5 +9,5 @@
  at https://sourceforge.net/p/dps8m/code/ci/master/tree/LICENSE
  */
 
-void do_caf (void);
-void updateIWB (word18 addr, word6 tag);
+void do_caf (cpu_state_t *cpu_p);
+void updateIWB (cpu_state_t *cpu_p, word18 addr, word6 tag);

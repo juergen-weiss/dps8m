@@ -236,7 +236,7 @@ word36 Add36b (word36 op1, word36 op2, word1 carryin, word18 flagsToSet, word18 
           CLRF (* flags, I_CARRY);
       }
  
-    if (chkOVF () && (flagsToSet & I_OFLOW))
+    if (chkOVF (cpup) && (flagsToSet & I_OFLOW))
       {
         if (* ovf)
           SETF (* flags, I_OFLOW);      // overflow
@@ -322,7 +322,7 @@ word36 Sub36b (word36 op1, word36 op2, word1 carryin, word18 flagsToSet, word18 
           SETF (* flags, I_CARRY);
       }
  
-    if (chkOVF () && (flagsToSet & I_OFLOW))
+    if (chkOVF (cpup) && (flagsToSet & I_OFLOW))
       {
         if (* ovf)
           SETF (* flags, I_OFLOW);      // overflow
@@ -409,7 +409,7 @@ word18 Add18b (word18 op1, word18 op2, word1 carryin, word18 flagsToSet, word18 
           CLRF (* flags, I_CARRY);
       }
  
-    if (chkOVF () && (flagsToSet & I_OFLOW))
+    if (chkOVF (cpup) && (flagsToSet & I_OFLOW))
       {
         if (* ovf)
           SETF (* flags, I_OFLOW);      // overflow
@@ -494,7 +494,7 @@ word18 Sub18b (word18 op1, word18 op2, word1 carryin, word18 flagsToSet, word18 
           SETF (* flags, I_CARRY);
       }
  
-    if (chkOVF () && (flagsToSet & I_OFLOW))
+    if (chkOVF (cpup) && (flagsToSet & I_OFLOW))
       {
         if (* ovf)
           SETF (* flags, I_OFLOW);      // overflow
@@ -624,7 +624,7 @@ word72 Add72b (word72 op1, word72 op2, word1 carryin, word18 flagsToSet, word18 
           CLRF (* flags, I_CARRY);
       }
  
-    if (chkOVF () && (flagsToSet & I_OFLOW))
+    if (chkOVF (cpup) && (flagsToSet & I_OFLOW))
       {
         if (* ovf)
           SETF (* flags, I_OFLOW);      // overflow
@@ -790,7 +790,7 @@ word72 Sub72b (word72 op1, word72 op2, word1 carryin, word18 flagsToSet, word18 
           SETF (* flags, I_CARRY);
       }
  
-    if (chkOVF () && (flagsToSet & I_OFLOW))
+    if (chkOVF (cpup) && (flagsToSet & I_OFLOW))
       {
         if (* ovf)
           SETF (* flags, I_OFLOW);      // overflow
@@ -846,7 +846,7 @@ word36 compl36(word36 op1, word18 *flags, bool * ovf)
     if (res & SIGN36) CPT (cpt2L, 31); // neg
 #endif
 
-    if (chkOVF () && * ovf)
+    if (chkOVF (cpup) && * ovf)
         SETF(*flags, I_OFLOW);
 
     if (res & SIGN36)
@@ -879,7 +879,7 @@ word18 compl18(word18 op1, word18 *flags, bool * ovf)
     if (res & SIGN18) CPT (cpt2L, 31); // neg
 #endif
 
-    if (chkOVF () && * ovf)
+    if (chkOVF (cpup) && * ovf)
         SETF(*flags, I_OFLOW);
     if (res & SIGN18)
         SETF(*flags, I_NEG);

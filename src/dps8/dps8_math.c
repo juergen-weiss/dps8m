@@ -749,7 +749,7 @@ void ufa (bool sub)
     if (e3 > 127)
     {
         SET_I_EOFL;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
             dlyDoFault (FAULT_OFL, fst_zero, "ufa exp overflow fault");
     }
     
@@ -757,7 +757,7 @@ void ufa (bool sub)
     if(e3 < -128)
     {
         SET_I_EUFL;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
             dlyDoFault (FAULT_OFL, fst_zero, "ufa exp underflow fault");
     }
 }
@@ -839,7 +839,7 @@ void fno (word8 * E, word36 * A, word36 * Q)
             if (*E == 127)
             {
                 SET_I_EOFL;
-                if (tstOVFfault ())
+                if (tstOVFfault (cpup))
                     dlyDoFault (FAULT_OFL, fst_zero, "fno exp overflow fault");
             }
             (*E) ++;
@@ -882,7 +882,7 @@ void fno (word8 * E, word36 * A, word36 * Q)
             if (*E == 127)
             {
                 SET_I_EOFL;
-                if (tstOVFfault ())
+                if (tstOVFfault (cpup))
                     dlyDoFault (FAULT_OFL, fst_zero, "fno exp overflow fault");
             }
             (*E) ++;
@@ -1041,7 +1041,7 @@ void fno (word8 * E, word36 * A, word36 * Q)
     if (e < -128)
     {
         SET_I_EUFL;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
             dlyDoFault (FAULT_OFL, fst_zero, "fno exp underflow fault");
     }
 
@@ -1236,7 +1236,7 @@ void fneg (void)
         if (cpu . rE == 127)
         {
             SET_I_EOFL;
-            if (tstOVFfault ())
+            if (tstOVFfault (cpup))
                 dlyDoFault (FAULT_OFL, fst_zero, "fneg exp overflow fault");
         }
         cpu . rE ++;
@@ -1304,13 +1304,13 @@ void ufm (void)
     if (e3 >  127)
     {
       SET_I_EOFL;
-      if (tstOVFfault ())
+      if (tstOVFfault (cpup))
           dlyDoFault (FAULT_OFL, fst_zero, "ufm exp overflow fault");
     }
     if (e3 < -128)
     {
       SET_I_EUFL;
-      if (tstOVFfault ())
+      if (tstOVFfault (cpup))
           dlyDoFault (FAULT_OFL, fst_zero, "ufm exp underflow fault");
     }
 
@@ -1349,7 +1349,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "m3a %016lx%016lx\n", (uint64_t) (m3a>>64), 
         if (e3 == 127)
         {
           SET_I_EOFL;
-          if (tstOVFfault ())
+          if (tstOVFfault (cpup))
               dlyDoFault (FAULT_OFL, fst_zero, "ufm exp overflow fault");
         }
 #ifdef NEED_128
@@ -1592,13 +1592,13 @@ static void fdvX(bool bInvert)
     if (e3 > 127)
     {
         SET_I_EOFL;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
             dlyDoFault (FAULT_OFL, fst_zero, "fdvX exp overflow fault");
     }
     if (e3 < -128)
     {
       SET_I_EUFL;
-      if (tstOVFfault ())
+      if (tstOVFfault (cpup))
           dlyDoFault (FAULT_OFL, fst_zero, "fdvX exp underflow fault");
     }
     
@@ -2596,7 +2596,7 @@ void dufa (bool subtract)
     if (e3 > 127)
       {
         SET_I_EOFL;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
           dlyDoFault (FAULT_OFL, fst_zero, "dufa exp overflow fault");
       }
     
@@ -2604,7 +2604,7 @@ void dufa (bool subtract)
     if (e3 < -128)
       {
         SET_I_EUFL;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
             dlyDoFault (FAULT_OFL, fst_zero, "dufa exp underflow fault");
       }
   }
@@ -2647,7 +2647,7 @@ void dufs (void)
         if (e2 == 127)
         {
             SET_I_EOFL;
-            if (tstOVFfault ())
+            if (tstOVFfault (cpup))
                 doFault (FAULT_OFL, fst_zero, "dufs exp overflow fault");
         }
         e2 += 1;
@@ -2740,13 +2740,13 @@ void dufm (void)
     if (e3 >  127)
     {
       SET_I_EOFL;
-      if (tstOVFfault ())
+      if (tstOVFfault (cpup))
           dlyDoFault (FAULT_OFL, fst_zero, "dufm exp overflow fault");
     }
     if (e3 < -128)
     {
       SET_I_EUFL;
-      if (tstOVFfault ())
+      if (tstOVFfault (cpup))
           dlyDoFault (FAULT_OFL, fst_zero, "dufm exp underflow fault");
     }
 
@@ -2834,7 +2834,7 @@ void dufm (void)
         if (e3 == 127)
         {
           SET_I_EOFL;
-          if (tstOVFfault ())
+          if (tstOVFfault (cpup))
               dlyDoFault (FAULT_OFL, fst_zero, "dufm exp overflow fault");
         }
 #ifdef NEED_128
@@ -3093,13 +3093,13 @@ static void dfdvX (bool bInvert)
     if (e3 > 127)
       {
         SET_I_EOFL;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
           dlyDoFault (FAULT_OFL, fst_zero, "dfdvX exp overflow fault");
        }
     if (e3 < -128)
       {
         SET_I_EUFL;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
           dlyDoFault (FAULT_OFL, fst_zero, "dfdvX exp underflow fault");
       }
 

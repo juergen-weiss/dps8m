@@ -545,7 +545,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "EIS %ld Write8 TRR %o TSR %05o\n", eisaddr_
                   p->wordDirty[i] = false;
                 }
 #else
-            Write8 (p->cachedAddr, p -> cachedParagraph, true);
+            Write8 (cpup, p->cachedAddr, p -> cachedParagraph, true);
 #endif
           }
         else
@@ -580,7 +580,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "EIS %ld Write8 NO PR TRR %o TSR %05o\n", ei
                   p->wordDirty[i] = false;
                 }
 #else
-            Write8 (p->cachedAddr, p -> cachedParagraph, false);
+            Write8 (cpup, p->cachedAddr, p -> cachedParagraph, false);
 #endif
           }
       }
@@ -614,7 +614,7 @@ static void EISReadCache (EISaddr * p, word18 address)
         cpu.TPR.TSR = p -> SNR;
 { long eisaddr_idx = EISADDR_IDX (p);
 sim_debug (DBG_TRACEEXT, & cpu_dev, "EIS %ld Read8 TRR %o TSR %05o\n", eisaddr_idx, cpu.TPR.TRR, cpu.TPR.TSR); }
-        Read8 (paragraphAddress, p -> cachedParagraph, true);
+        Read8 (cpup, paragraphAddress, p -> cachedParagraph, true);
 
         if_sim_debug (DBG_TRACEEXT, & cpu_dev)
           {
@@ -634,7 +634,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "EIS %ld Read8 TRR %o TSR %05o\n", eisaddr_i
         
 { long eisaddr_idx = EISADDR_IDX (p);
 sim_debug (DBG_TRACEEXT, & cpu_dev, "EIS %ld Read8 NO PR TRR %o TSR %05o\n", eisaddr_idx, cpu.TPR.TRR, cpu.TPR.TSR); }
-        Read8 (paragraphAddress, p -> cachedParagraph, false);
+        Read8 (cpup, paragraphAddress, p -> cachedParagraph, false);
         if_sim_debug (DBG_TRACEEXT, & cpu_dev)
           {
             for (uint i = 0; i < 8; i ++)
@@ -776,7 +776,7 @@ if (eisaddr_idx < 0 || eisaddr_idx > 2) { sim_warn ("IDX1"); return }
       {
         cpu.TPR.TRR = p -> RNR;
         cpu.TPR.TSR = p -> SNR;
-        ReadPage (addressN, data, true);
+        ReadPage (cpup, addressN, data, true);
 
         if_sim_debug (DBG_TRACEEXT, & cpu_dev)
           {
@@ -800,7 +800,7 @@ if (eisaddr_idx < 0 || eisaddr_idx > 2) { sim_warn ("IDX1"); return }
         cpu.TPR.TSR = cpu.PPR.PSR;
           //}
         
-        ReadPage (addressN, data, false);
+        ReadPage (cpup, addressN, data, false);
         if_sim_debug (DBG_TRACEEXT, & cpu_dev)
           {
             for (uint i = 0; i < PGSZ; i ++)
@@ -836,7 +836,7 @@ if (eisaddr_idx < 0 || eisaddr_idx > 2) { sim_warn ("IDX1"); return }
       {
         cpu.TPR.TRR = p -> RNR;
         cpu.TPR.TSR = p -> SNR;
-        WritePage (addressN, data, true);
+        WritePage (cpup, addressN, data, true);
 
         if_sim_debug (DBG_TRACEEXT, & cpu_dev)
           {
@@ -860,7 +860,7 @@ if (eisaddr_idx < 0 || eisaddr_idx > 2) { sim_warn ("IDX1"); return }
         cpu.TPR.TSR = cpu.PPR.PSR;
           //}
         
-        WritePage (addressN, data, false);
+        WritePage (cpup, addressN, data, false);
         if_sim_debug (DBG_TRACEEXT, & cpu_dev)
           {
             for (uint i = 0; i < PGSZ; i ++)
@@ -7918,7 +7918,7 @@ sim_debug (DBG_CAC, & cpu_dev, "R %o\n", R);
 sim_debug (DBG_CAC, & cpu_dev, "Trunc %o\n", Trunc);
 sim_debug (DBG_CAC, & cpu_dev, "TRUNC %o\n", TST_I_TRUNC);
 sim_debug (DBG_CAC, & cpu_dev, "OMASK %o\n", TST_I_OMASK);
-sim_debug (DBG_CAC, & cpu_dev, "tstOVFfault %o\n", tstOVFfault ());
+sim_debug (DBG_CAC, & cpu_dev, "tstOVFfault %o\n", tstOVFfault (cpup));
 sim_debug (DBG_CAC, & cpu_dev, "T %o\n", T);
 sim_debug (DBG_CAC, & cpu_dev, "EOvr %o\n", EOvr);
 sim_debug (DBG_CAC, & cpu_dev, "Ovr %o\n", Ovr);
@@ -7935,14 +7935,14 @@ sim_debug (DBG_CAC, & cpu_dev, "Ovr %o\n", Ovr);
     cleanupOperandDescriptor (1);
     cleanupOperandDescriptor (2);
     
-    if (TST_I_TRUNC && T && tstOVFfault ())
+    if (TST_I_TRUNC && T && tstOVFfault (cpup))
         doFault (FAULT_OFL, fst_zero, "mvn truncation(overflow) fault");
-    if (EOvr && tstOVFfault ())
+    if (EOvr && tstOVFfault (cpup))
         doFault (FAULT_OFL, fst_zero, "mvn over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
           doFault (FAULT_OFL, fst_zero, "mvn overflow fault");
     }
 }
@@ -8187,7 +8187,7 @@ void csl (bool isSZTL)
         // instruction, then a truncation (overflow) fault occurs.
         
         SET_I_TRUNC;
-        if (T && tstOVFfault ())
+        if (T && tstOVFfault (cpup))
         {
             doFault(FAULT_OFL, fst_zero, "csl truncation fault");
         }
@@ -8510,7 +8510,7 @@ void csr (bool isSZTR)
         // instruction, then a truncation (overflow) fault occurs.
         
         SET_I_TRUNC;
-        if (T && tstOVFfault ())
+        if (T && tstOVFfault (cpup))
         {
             doFault(FAULT_OFL, fst_zero, "csr truncation fault");
         }
@@ -9440,7 +9440,7 @@ void btd (void)
     if (Ovr)
     {
         SET_I_OFLOW;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
           doFault(FAULT_OFL, fst_zero, "btd overflow fault");
     }
 }
@@ -9831,7 +9831,7 @@ sim_printf("dtb: N1 %d N2 %d nin %d CN1 %d CN2 %d msk %012"PRIo64" %012"PRIo64"\
     if (Ovr)
     {
         SET_I_OFLOW;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
           doFault(FAULT_OFL, fst_zero, "dtb overflow fault");
     }
 }
@@ -10141,14 +10141,14 @@ void ad2d (void)
     cleanupOperandDescriptor (2);
     cleanupOperandDescriptor (3);
 
-    if (TST_I_TRUNC && T && tstOVFfault ())
+    if (TST_I_TRUNC && T && tstOVFfault (cpup))
       doFault(FAULT_OFL, fst_zero, "ad2d truncation(overflow) fault");
-    if (EOvr && tstOVFfault ())
+    if (EOvr && tstOVFfault (cpup))
         doFault(FAULT_OFL, fst_zero, "ad2d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
           doFault(FAULT_OFL, fst_zero, "ad2d overflow fault");
     }
 }
@@ -10521,14 +10521,14 @@ void ad3d (void)
     cleanupOperandDescriptor (2);
     cleanupOperandDescriptor (3);
 
-    if (TST_I_TRUNC && T && tstOVFfault ())
+    if (TST_I_TRUNC && T && tstOVFfault (cpup))
       doFault(FAULT_OFL, fst_zero, "ad3d truncation(overflow) fault");
-    if (EOvr && tstOVFfault ())
+    if (EOvr && tstOVFfault (cpup))
         doFault(FAULT_OFL, fst_zero, "ad3d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
           doFault(FAULT_OFL, fst_zero, "ad3d overflow fault");
     }
 }
@@ -10835,14 +10835,14 @@ void sb2d (void)
     cleanupOperandDescriptor (2);
     cleanupOperandDescriptor (3);
 
-    if (TST_I_TRUNC && T && tstOVFfault ())
+    if (TST_I_TRUNC && T && tstOVFfault (cpup))
       doFault(FAULT_OFL, fst_zero, "sb2d truncation(overflow) fault");
-    if (EOvr && tstOVFfault ())
+    if (EOvr && tstOVFfault (cpup))
         doFault(FAULT_OFL, fst_zero, "sb2d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
           doFault(FAULT_OFL, fst_zero, "sb2d overflow fault");
     }
 }
@@ -11166,14 +11166,14 @@ void sb3d (void)
     cleanupOperandDescriptor (2);
     cleanupOperandDescriptor (3);
 
-    if (TST_I_TRUNC && T && tstOVFfault ())
+    if (TST_I_TRUNC && T && tstOVFfault (cpup))
       doFault(FAULT_OFL, fst_zero, "sb3d truncation(overflow) fault");
-    if (EOvr && tstOVFfault ())
+    if (EOvr && tstOVFfault (cpup))
         doFault(FAULT_OFL, fst_zero, "sb3d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
           doFault(FAULT_OFL, fst_zero, "sb3d overflow fault");
     }
 }
@@ -11436,14 +11436,14 @@ void mp2d (void)
     cleanupOperandDescriptor (2);
     cleanupOperandDescriptor (3);
 
-    if (TST_I_TRUNC && T && tstOVFfault ())
+    if (TST_I_TRUNC && T && tstOVFfault (cpup))
       doFault(FAULT_OFL, fst_zero, "mp2d truncation(overflow) fault");
-    if (EOvr && tstOVFfault ())
+    if (EOvr && tstOVFfault (cpup))
         doFault(FAULT_OFL, fst_zero, "mp2d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
           doFault(FAULT_OFL, fst_zero, "mp2d overflow fault");
     }
 }
@@ -11742,14 +11742,14 @@ void mp3d (void)
     cleanupOperandDescriptor (2);
     cleanupOperandDescriptor (3);
 
-    if (TST_I_TRUNC && T && tstOVFfault ())
+    if (TST_I_TRUNC && T && tstOVFfault (cpup))
       doFault(FAULT_OFL, fst_zero, "mp3d truncation(overflow) fault");
-    if (EOvr && tstOVFfault ())
+    if (EOvr && tstOVFfault (cpup))
         doFault(FAULT_OFL, fst_zero, "mp3d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
           doFault(FAULT_OFL, fst_zero, "mp3d overflow fault");
     }
 }
@@ -12894,14 +12894,14 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "dv2d S1 %d S2 %d N1 %d N2 %d clz1 %d clz2 %
     cleanupOperandDescriptor (2);
     cleanupOperandDescriptor (3);
 
-    //if (TST_I_TRUNC && T && tstOVFfault ())
+    //if (TST_I_TRUNC && T && tstOVFfault (cpup))
     //  doFault(FAULT_OFL, fst_zero, "dv2d truncation(overflow) fault");
-    if (EOvr && tstOVFfault ())
+    if (EOvr && tstOVFfault (cpup))
         doFault(FAULT_OFL, fst_zero, "dv2d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
           doFault(FAULT_OFL, fst_zero, "dv2d overflow fault");
     }
 }
@@ -13326,14 +13326,14 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "dv3d S1 %d S2 %d N1 %d N2 %d clz1 %d clz2 %
     cleanupOperandDescriptor (2);
     cleanupOperandDescriptor (3);
     
-    //if (TST_I_TRUNC && T && tstOVFfault ())
+    //if (TST_I_TRUNC && T && tstOVFfault (cpup))
     //  doFault(FAULT_OFL, fst_zero, "dv3d truncation(overflow) fault");
-    if (EOvr && tstOVFfault ())
+    if (EOvr && tstOVFfault (cpup))
         doFault(FAULT_OFL, fst_zero, "dv3d over/underflow fault");
     if (Ovr)
     {
         SET_I_OFLOW;
-        if (tstOVFfault ())
+        if (tstOVFfault (cpup))
           doFault(FAULT_OFL, fst_zero, "dv3d overflow fault");
     }
 }

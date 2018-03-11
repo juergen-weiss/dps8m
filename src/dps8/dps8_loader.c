@@ -358,11 +358,11 @@ static void makeITS(int segno, int offset, int tag, word36 *Ypair)
 
 // Assumes unpaged DSBR
 
-sdw0_s *fetchSDW (word15 segno)
+sdw0_s *fetchSDW (cpu_state_t *cpu_p, word15 segno)
   {
     word36 SDWeven, SDWodd;
     
-    core_read2 ((cpu.DSBR.ADDR + 2u * segno) & PAMASK, & SDWeven, & SDWodd,
+    core_read2 (cpu_p, (cpu.DSBR.ADDR + 2u * segno) & PAMASK, & SDWeven, & SDWodd,
                  __func__);
     
     // even word
@@ -1373,7 +1373,7 @@ static t_stat loadUnpagedSegment(int segno, word24 addr, word18 count)
     word24 sdwaddress = cpu.DSBR.ADDR + (word24) (2 * segno);
     if (!sim_quiet) sim_printf("Writing SDW to address %08o (DSBR.ADDR+2*%d offset) \n", sdwaddress, segno);
     // write sdw to segment table
-    core_write2(sdwaddress, yPair[0], yPair[1], __func__);
+    core_write2(cpu_p, sdwaddress, yPair[0], yPair[1], __func__);
     
     return SCPE_OK;
 }
