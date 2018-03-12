@@ -1695,28 +1695,21 @@ setCPU:;
             PNL (panel_process_event ());
           }
 #endif
-        cpu_p->cycleCnt ++;
 #endif // ! THREADZ
 
-#ifdef TEST_OLIN
-          cmpxchg ();
-#endif
-#ifdef TEST_FENCE
-    fence ();
-#endif
+        cpu_p->cycleCnt ++;
+
 #ifdef THREADZ
         // If we faulted somewhere with the memory lock set, clear it.
         unlock_mem_force ();
 
         // wait on run/switch
         cpuRunningWait ();
-
 #endif // THREADZ
+
 #ifdef LOCKLESS
 	core_unlock_all(cpu_p);
-	// wait on run/switch
-	//        cpuRunningWait ();
-#endif
+#endif // LOCKLESS
 
         int con_unit_idx = check_attn_key ();
         if (con_unit_idx != -1)
@@ -1768,7 +1761,7 @@ setCPU:;
           {
             cpu_p->rTR &= MASK27;
             if (cpu_p->switches.tro_enable)
-            setG7fault (current_running_cpu_idx, FAULT_TRO, fst_zero);
+	        setG7fault (current_running_cpu_idx, FAULT_TRO, fst_zero);
           }
 
         sim_debug (DBG_CYCLE, & cpu_dev, "Cycle is %s\n",
