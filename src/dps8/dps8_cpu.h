@@ -2190,6 +2190,11 @@ int core_unlock_all(cpu_state_t *cpu_p);
 	{								\
 	  sim_warn ("%s: locked %x addr %x deadlock\n", __FUNCTION__, cpu.locked_addr, addr); \
 	}								\
+      cpu.lockCnt++;							\
+      if (i == DEADLOCK_DETECT)						\
+	cpu.lockImmediate++;						\
+      cpu.lockWait += (DEADLOCK_DETECT-i);				\
+      cpu.lockWaitMax = ((DEADLOCK_DETECT-i) > cpu.lockWaitMax) ? (DEADLOCK_DETECT-i) : cpu.lockWaitMax; \
     }									\
   while (0)
 

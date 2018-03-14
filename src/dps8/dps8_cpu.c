@@ -2539,13 +2539,13 @@ leave:
 #ifdef HDBG
     hdbgPrint ();
 #endif
-    sim_msg ("\ncycles = %llu\n", cpu.cycleCnt);
-    sim_msg ("instructions  %15llu\n", cpu.instrCnt);
-    sim_msg ("lockCnt       %15llu\n", cpu.lockCnt);
-    sim_msg ("lockImmediate %15llu\n", cpu.lockImmediate);
-    sim_msg ("lockWait      %15llu\n", cpu.lockWait);
-    sim_msg ("lockWaitMax   %15llu\n", cpu.lockWaitMax);
-    sim_msg ("lockYield     %15llu\n", cpu.lockYield);
+    sim_msg ("\ncycles = %llu\n",cpu_p->cycleCnt);
+    sim_msg ("instructions  %15llu\n",cpu_p->instrCnt);
+    sim_msg ("lockCnt       %15llu\n",cpu_p->lockCnt);
+    sim_msg ("lockImmediate %15llu\n",cpu_p->lockImmediate);
+    sim_msg ("lockWait      %15llu\n",cpu_p->lockWait);
+    sim_msg ("lockWaitMax   %15llu\n",cpu_p->lockWaitMax);
+    sim_msg ("lockYield     %15llu\n",cpu_p->lockYield);
 #if 0
     for (int i = 0; i < N_FAULTS; i ++)
       {
