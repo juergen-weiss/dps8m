@@ -1953,6 +1953,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "executeInstruction not EIS sets XSF to %o\n
           {
             CPT (cpt2L, 2); // Read operands
             readOperands (cpu_p);
+	    cpu_p->rmw_address = cpu_p->iefpFinalAddress;
             if (cpu_p->cu.rl)
               {
                 switch (operand_size (cpu_p))
@@ -2023,6 +2024,9 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "executeInstruction not EIS sets XSF to %o\n
 	  {
 	      if (operand_size(cpu_p) != 1)
 		  sim_warn("executeInstruction: operand_size!= 1\n");
+
+	      if (cpu_p->iefpFinalAddress != cpu_p->rmw_address)
+		sim_warn("executeInstruction: write addr changed %o %d\n", cpu_p->iefpFinalAddress, cpu_p->rmw_address);
 	      core_write_unlock (cpu_p, cpu_p->iefpFinalAddress, cpu_p->CY, __func__);
          }
 	else

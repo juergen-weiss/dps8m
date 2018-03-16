@@ -1782,6 +1782,8 @@ typedef struct
 #endif
 #ifdef LOCKLESS
     word24 locked_addr;
+    word24 rmw_address;
+    word24 pad[16];
 #endif
 //#ifdef THREADZ
 //    // Set if this thread has set memlock
