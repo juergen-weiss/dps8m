@@ -114,6 +114,13 @@ static void writeOperands (cpu_state_t *cpu_p)
         // Put the character into the data word
         //
 
+#ifdef LOCKLESS
+	word36 tmpdata;
+	core_read(cpu_p, cpu_p->char_word_address, &tmpdata, __func__);
+	if (tmpdata != cpu_p->ou.character_data)
+	  sim_warn("write char: data changed from %llo to %llo at %o\n", cpu_p->ou.character_data, tmpdata, cpu_p->char_word_address);
+#endif
+
         switch (cpu_p->ou.characterOperandSize)
           {
             case TB6:
