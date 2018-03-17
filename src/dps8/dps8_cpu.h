@@ -1512,6 +1512,11 @@ typedef struct
     unsigned long long instrCnt;
     unsigned long long instrCntT0;
     unsigned long long instrCntT1;
+    unsigned long long lockCnt;
+    unsigned long long lockImmediate;
+    unsigned long long lockWait;
+    unsigned long long lockWaitMax;
+    unsigned long long lockYield;
     unsigned long faultCnt [N_FAULTS];
 
     // The following are all from the control unit history register:
@@ -2163,7 +2168,7 @@ int core_read_lock (cpu_state_t *cpu_p, word24 addr, word36 *data, const char * 
 int core_write_unlock (cpu_state_t *cpu_p, word24 addr, word36 data, const char * ctx);
 int core_unlock_all(cpu_state_t *cpu_p);
 
-#define DEADLOCK_DETECT	1000000000
+#define DEADLOCK_DETECT	  0x40000000U
 #define MEM_LOCKED_BIT    61
 #define MEM_LOCKED        (1LLU<<MEM_LOCKED_BIT)
 
@@ -2173,10 +2178,13 @@ int core_unlock_all(cpu_state_t *cpu_p);
 #define LOCK_CORE_WORD(addr)			\
   do									\
     {									\
-      int i = DEADLOCK_DETECT;						\
+      unsigned int i = DEADLOCK_DETECT;					\
       while ( atomic_testandset_64((volatile u_long *)&M[addr], MEM_LOCKED_BIT) == 1 && i > 0) \
 	{								\
 	  i--;								\
+	  if ((i & 0xff) == 0) {					\
+	    pthread_yield();						\
+	  }								\
 	}								\
       if (i == 0)							\
 	{								\
