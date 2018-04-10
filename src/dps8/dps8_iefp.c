@@ -43,7 +43,7 @@ void Read (cpu_state_t *cpu_p, word18 address, word36 * result, processor_cycle_
 
     //if (get_went_appending () ||
     if (cpu_p->cu.XSF ||
-        (cyctyp == APU_DATA_READ && cpu_p->cu.TSN_VALID [0]))
+        ((cyctyp == APU_DATA_READ || cyctyp == APU_DATA_RMW) && cpu_p->cu.TSN_VALID [0]))
       {
         goto B29;
       }
@@ -133,7 +133,7 @@ void Read2 (cpu_state_t *cpu_p, word18 address, word36 * result, processor_cycle
 
     //if (get_went_appending () ||
     if (cpu_p->cu.XSF ||
-        (cyctyp == APU_DATA_READ && cpu_p->cu.TSN_VALID [0]) ||
+        ((cyctyp == APU_DATA_READ || cyctyp == APU_DATA_RMW) && cpu_p->cu.TSN_VALID [0]) ||
         cyctyp == RTCD_OPERAND_FETCH) // ISOLTS-886 
            // Another option would be to set_went_appending in ReadRTCDOp
       {
