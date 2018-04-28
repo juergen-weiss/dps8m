@@ -525,6 +525,7 @@ startCA:;
         // in case it turns out to be a ITS/ITP
         iTAG = cpu_p->rTAG;
 
+        word18 saveCA = cpu.TPR.CA;
         ReadIndirect (cpu_p);
 
         // "In the case of RI modification, only one indirect reference is made
@@ -554,7 +555,15 @@ startCA:;
               }
           }
 
-        if (ISITP (cpu_p->itxPair[0]) || ISITS (cpu_p->itxPair[0]))
+        if ((saveCA & 1) == 1 && (ISITP (cpu_p->itxPair[0]) || ISITS (cpu_p->itxPair[0])))
+	  {
+	    sim_warn ("%s: itp/its at odd address\n", __func__);
+#ifdef TESTING
+	    traceInstruction (0);
+#endif
+	  }
+
+	if ((saveCA & 1) == 0 && (ISITP (cpu_p->itxPair[0]) || ISITS (cpu_p->itxPair[0])))
           {
             do_ITS_ITP (cpu_p, iTAG, & cpu_p->rTAG);
           }
@@ -604,7 +613,15 @@ startCA:;
         word18 saveCA = cpu_p->TPR.CA;
         ReadIndirect (cpu_p);
 
-        if (ISITP (cpu_p->itxPair[0]) || ISITS (cpu_p->itxPair[0]))
+        if ((saveCA & 1) == 1 && (ISITP (cpu_p->itxPair[0]) || ISITS (cpu_p->itxPair[0])))
+	  {
+	    sim_warn ("%s: itp/its at odd address\n", __func__);
+#ifdef TESTING
+	    traceInstruction (0);
+#endif
+	  }
+
+	if ((saveCA & 1) == 0 && (ISITP (cpu_p->itxPair[0]) || ISITS (cpu_p->itxPair[0])))
           {
             do_ITS_ITP (cpu_p, iTAG, & cpu_p->rTAG);
           }
@@ -904,7 +921,12 @@ startCA:;
 
                 cpu_p->cu.pot = 1;
 
+#ifdef LOCKLESSXXX
+		// gives warnings as another lock is aquired in between
+                Read (cpu_p, cpu_p->TPR.CA, & cpu_p->ou.character_data, (i->info->flags & RMW) == STORE_OPERAND ? OPERAND_RMW : OPERAND_READ);
+#else
                 Read (cpu_p, cpu_p->TPR.CA, & cpu_p->ou.character_data, OPERAND_READ);
+#endif
 #ifdef LOCKLESS
 		cpu_p->char_word_address = cpu_p->iefpFinalAddress;
 #endif
