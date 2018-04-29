@@ -739,7 +739,7 @@ startCA:;
             case TM_IR:
               {
                 updateIWB (cpu_p, cpu_p->TPR.CA, cpu_p->rTAG); // XXX guessing here...
-                goto IR_MOD;
+                goto IR_MOD_1;
               } // TM_IR
           } // Tm
 

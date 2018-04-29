@@ -2128,10 +2128,10 @@ J:;
         // C(Y)0,17 -> C(IWB)0,17
         // C(Y)30,35 -> C(IWB)30,35
         // 0 -> C(IWB)29
-        updateIWB (cpu_p, GET_OFFSET (* data), (* data) & MASK6);
+        updateIWB (cpu_p, GET_ADDR (* data), (* data) & MASK6);
 
-        cpu_p->cu.TSN_PRNO[0] = n;
-        cpu_p->cu.TSN_VALID[0] = 1;
+        //cpu.cu.TSN_PRNO[0] = n;
+        //cpu.cu.TSN_VALID[0] = 1;
 
       }
 
