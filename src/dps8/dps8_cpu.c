@@ -2322,8 +2322,12 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                     else
                       {
                         if (cpu_p->switches.tro_enable)
-                          setG7fault (current_running_cpu_idx, FAULT_TRO,
-                                      fst_zero);
+			  {
+			    lock_scu ();
+			    setG7fault (current_running_cpu_idx, FAULT_TRO,
+					fst_zero);
+			    unlock_scu ();
+			  }
                         cpu_p->rTR = 0;
                       }
 #endif // !NO_TIMEWAIT
@@ -2402,12 +2406,11 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                     cu_safe_restore (cpu_p);
                     cpu_p->wasXfer = false;
                     CPT (cpt1U, 12); // cu restored
-                    set_cpu_cycle (cpu_p, FETCH_cycle);
+		    set_cpu_cycle (cpu_p, FETCH_cycle);
                     clearFaultCycle (cpu_p);
-                    // cu_safe_restore should have restored CU.IWB, so
+                    // cu_safe_restore calls decode_instruction ()
                     // we can determine the instruction length.
                     // decode_instruction() restores ci->info->ndes
-                    decode_instruction (cpu_p, IWB_IRODD, & cpu_p->currentInstruction);
 
                     cpu_p->PPR.IC += ci->info->ndes;
                     cpu_p->PPR.IC ++;
@@ -2470,7 +2473,6 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                 // cu_safe_restore should have restored CU.IWB, so
                 // we can determine the instruction length.
                 // decode_instruction() restores ci->info->ndes
-                decode_instruction (cpu_p, IWB_IRODD, & cpu_p->currentInstruction);
 
                 cpu_p->PPR.IC += ci->info->ndes;
                 cpu_p->PPR.IC ++;
@@ -3435,14 +3437,6 @@ void decode_instruction (cpu_state_t *cpu_p, word36 inst, DCDstruct * p)
             memset (& cpu_p->currentEISinstruction, 0,
                     sizeof (cpu_p->currentEISinstruction)); 
           }
-      }
-
-    // Save the RFI
-    p->restart = cpu_p->cu.rfi != 0;
-    cpu_p->cu.rfi = 0;
-    if (p->restart)
-      {
-        sim_debug (DBG_TRACE, & cpu_dev, "restart\n");
       }
   }
 

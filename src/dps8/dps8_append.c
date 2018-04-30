@@ -1314,9 +1314,9 @@ word24 do_append_cycle (cpu_state_t *cpu_p, processor_cycle_type thisCycle, word
       goto A;
 
 #ifdef LOCKLESS
-    // locked RMW
-    if (thisCycle == OPERAND_RMW)
-      goto A;
+    //    // locked RMW
+    //if (thisCycle == OPERAND_RMW)
+    //  goto A;
 #endif
 
     // R/M/W?

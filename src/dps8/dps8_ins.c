@@ -586,6 +586,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "%s sets XSF to %o\n", __func__, cpu_p->cu.X
 void cu_safe_restore (cpu_state_t *cpu_p)
   {
     words2scu (cpu_p, cpu_p->scu_data);
+    decode_instruction (cpu_p, IWB_IRODD, & cpu_p->currentInstruction);
   }
 
 static void dump_words (cpu_state_t *cpu_p, word36 * words)
@@ -1274,7 +1275,8 @@ t_stat executeInstruction (cpu_state_t *cpu_p)
 // Local caches of frequently accessed data
 
     const uint ndes = info->ndes;
-    const bool restart = ci->restart;         // instruction is to be restarted
+    const bool restart = cpu_p->cu.rfi;         // instruction is to be restarted
+    cpu_p->cu.rfi = 0;
     const opc_flag flags = info->flags;
     const opc_mod mods = info->mods;
     const uint32 opcode = ci->opcode;   // opcode
@@ -9573,6 +9575,7 @@ elapsedtime ();
       }
 
     words2scu (cpu_p, cpu_p->Yblock8);
+    decode_instruction (cpu_p, IWB_IRODD, & cpu_p->currentInstruction);
 
 // Restore addressing mode
 

@@ -349,7 +349,7 @@ void updateIWB (cpu_state_t *cpu_p, word18 addr, word6 tag)
 void do_caf (cpu_state_t *cpu_p)
   {
 //#ifdef CA_REWORK
-    if (getbits36_1 (cpu_p->cu.IWB, 29) == 0)
+    if (cpu_p->currentInstruction.b29 == 0)
       {
         cpu_p->TPR.CA = GET_ADDR (IWB_IRODD);
       }
@@ -525,7 +525,7 @@ startCA:;
         // in case it turns out to be a ITS/ITP
         iTAG = cpu_p->rTAG;
 
-        word18 saveCA = cpu.TPR.CA;
+        word18 saveCA = cpu_p->TPR.CA;
         ReadIndirect (cpu_p);
 
         // "In the case of RI modification, only one indirect reference is made

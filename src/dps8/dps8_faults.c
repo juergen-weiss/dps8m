@@ -901,19 +901,21 @@ void doG7Fault (cpu_state_t *cpu_p, bool allowTR)
       // }
     // According AL39,  Table 7-1. List of Faults, priority of connect is 25
     // and priority of Timer runout is 26, lower number means higher priority
+    lock_scu ();
      if (cpu_p->g7Faults & (1u << FAULT_CON))
        {
          cpu_p->g7Faults &= ~(1u << FAULT_CON);
 
-         cpu_p->cu.CNCHN = cpu_p->g7SubFaults[FAULT_CON].fault_con_subtype & MASK3;
-         doFault (cpu_p, FAULT_CON, cpu_p->g7SubFaults [FAULT_CON], "Connect");
+	 unlock_scu ();
+         doFault (cpu_p, FAULT_CON, cpu_p->g7SubFaults [FAULT_CON], "Connect"); 
        }
      if (allowTR && cpu_p->g7Faults & (1u << FAULT_TRO))
        {
          cpu_p->g7Faults &= ~(1u << FAULT_TRO);
 
          //sim_printf("timer runout %12o\n",cpu_p->PPR.IC);
-         doFault (cpu_p, FAULT_TRO, fst_zero, "Timer runout"); 
+         unlock_scu ();
+	 doFault (cpu_p, FAULT_TRO, fst_zero, "Timer runout"); 
        }
 
      // Strictly speaking EXF isn't a G7 fault, put if we treat is as one,
@@ -923,31 +925,37 @@ void doG7Fault (cpu_state_t *cpu_p, bool allowTR)
        {
          cpu_p->g7Faults &= ~(1u << FAULT_EXF);
 
-         doFault (cpu_p, FAULT_EXF, fst_zero, "Execute fault");
+	 unlock_scu ();
+	 doFault (cpu_p, FAULT_EXF, fst_zero, "Execute fault");
        }
 
 #ifdef L68
      if (cpu_p->FFV_faults & 1u)  // FFV + 2 OC TRAP
        {
          cpu_p->FFV_faults &= ~1u;
+	 unlock_scu ();
          do_FFV_fault (1, "OC TRAP");
        }
      if (cpu_p->FFV_faults & 2u)  // FFV + 4 CU HISTORY OVERFLOW TRAP
        {
          cpu_p->FFV_faults &= ~2u;
+	 unlock_scu ();
          do_FFV_fault (2, "CU HIST OVF TRAP");
        }
      if (cpu_p->FFV_faults & 4u)  // FFV + 6 ADR TRAP
        {
          cpu_p->FFV_faults &= ~4u;
+	 unlock_scu ();
          do_FFV_fault (3, "ADR TRAP");
        }
 #endif
+     unlock_scu ();
      doFault (cpu_p, FAULT_TRB, (_fault_subtype) {.bits=cpu_p->g7Faults}, "Dazed and confused in doG7Fault");
   }
 
 void advanceG7Faults (cpu_state_t *cpu_p)
   {
+    lock_scu ();
     cpu_p->g7Faults |= cpu_p->g7FaultsPreset;
     cpu_p->g7FaultsPreset = 0;
     //memcpy (cpu_p->g7SubFaults, cpu_p->g7SubFaultsPreset, sizeof (cpu_p->g7SubFaults));
@@ -955,5 +963,6 @@ void advanceG7Faults (cpu_state_t *cpu_p)
     cpu_p->FFV_faults |= cpu_p->FFV_faults_preset;
     cpu_p->FFV_faults_preset = 0;
 #endif
+    unlock_scu ();
   }
 
