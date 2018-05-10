@@ -214,6 +214,11 @@ static void do_ITP (cpu_state_t *cpu_p)
     cpu_p->rY = cpu_p->TPR.CA;
 
     cpu_p->rTAG = GET_ITP_MOD (cpu_p->itxPair);
+
+    cpu_p->cu.itp = 1;
+    cpu_p->cu.TSN_PRNO[0] = n;
+    cpu_p->cu.TSN_VALID[0] = 1;
+
     return;
   }
 
@@ -252,6 +257,8 @@ static void do_ITS (cpu_state_t *cpu_p)
     cpu_p->rY = cpu_p->TPR.CA;
 
     cpu_p->rTAG = GET_ITS_MOD (cpu_p->itxPair);
+
+    cpu_p->cu.its = 1;
 
     return;
   }
@@ -402,16 +409,41 @@ startCA:;
     if (cpu_p->cu.CT_HOLD)
       {
         sim_debug (DBG_ADDRMOD, & cpu_dev,
-                   "%s(startCA): IR mode restart; CT_HOLD %02o\n",
+                   "%s(startCA): restart; CT_HOLD %02o\n",
                    __func__, cpu_p->cu.CT_HOLD);
-        cpu_p->rTAG = cpu_p->cu.CT_HOLD;
-        Td = GET_TD (cpu_p->rTAG);
-        Tm = GET_TM (cpu_p->rTAG);
-        goto IR_MOD_1;
+	word6 save_rTAG = cpu_p->rTAG;
+	if (Tm == TM_IR)
+	  {
+	    cpu_p->rTAG = cpu_p->cu.CT_HOLD;
+	    Td = GET_TD (cpu_p->rTAG);
+	    Tm = GET_TM (cpu_p->rTAG);
+	    cpu_p->cu.CT_HOLD = save_rTAG;
+	  }
+#ifdef ISOLTS
+       else if (GET_TM(cpu_p->cu.CT_HOLD) == TM_IT && GET_TD (cpu_p->cu.CT_HOLD) == IT_DIC &&
+		cpu_p->cu.pot == 1 && GET_ADDR (IWB_IRODD) == cpu_p->TPR.CA)
+         {
+           cpu_p->TPR.CA--;
+           sim_warn ("%s: correct CA\n", __func__);
+         }
+#endif
+       else if (Tm == TM_IT && (Td == IT_IDC || Td == IT_DIC))
+         {
+           cpu_p->cu.pot = 1;
+         }
+      }
+    else
+      {
+	// not CT_HOLD
+	if (Tm == TM_IR || (Tm == TM_IT && (Td == IT_IDC || Td == IT_DIC)))
+	  cpu_p->cu.CT_HOLD = cpu_p->rTAG;
+	cpu_p->cu.its = 0;
+	cpu_p->cu.itp = 0;
+	cpu_p->cu.pot = 0;
       }
     sim_debug (DBG_ADDRMOD, & cpu_dev,
-               "%s(startCA): TAG=%02o(%s) Tm=%o Td=%o\n",
-               __func__, cpu_p->rTAG, get_mod_string (buf, cpu_p->rTAG), Tm, Td);
+               "%s(startCA): TAG=%02o(%s) Tm=%o Td=%o CT_HOLD %02o\n",
+               __func__, cpu_p->rTAG, get_mod_string (buf, cpu_p->rTAG), Tm, Td, cpu_p->cu.CT_HOLD);
 
     switch (Tm)
       {
@@ -591,8 +623,6 @@ startCA:;
     // Figure 6-5. Indirect Then Register Modification Flowchart
     IR_MOD:;
       {
-        cpu_p->cu.CT_HOLD = cpu_p->rTAG;
-
         sim_debug (DBG_ADDRMOD, & cpu_dev,
                    "IR_MOD: CT_HOLD=%o %o\n", cpu_p->cu.CT_HOLD, Td);
 
@@ -697,7 +727,6 @@ startCA:;
 
                     updateIWB (cpu_p, cpu_p->TPR.CA, 0);
                   }
-                cpu_p->cu.CT_HOLD = 0;
                 return;
               } // TM_R
 
@@ -1375,6 +1404,8 @@ startCA:;
                 word36 indword;
                 Read (cpu_p, cpu_p->TPR.CA, & indword, APU_DATA_RMW);
 
+		cpu_p->cu.pot = 0;
+
                 Yi = GETHI (indword);
                 cpu_p->AM_tally = GET_TALLY (indword); // 12-bits
                 idwtag = GET_TAG (indword);
@@ -1384,12 +1415,10 @@ startCA:;
                            "tally=%04o idwtag=%02o\n", 
                            indword, Yi, cpu_p->AM_tally, idwtag);
 
-                Yi -= 1;
-                Yi &= MASK18;
-
                 word24 YiSafe2 = Yi; // save indirect address for later use
 
-                cpu_p->TPR.CA = Yi;
+                Yi -= 1;
+                Yi &= MASK18;
 
                 cpu_p->AM_tally += 1;
                 cpu_p->AM_tally &= 07777; // keep to 12-bits
@@ -1427,9 +1456,14 @@ startCA:;
                 // Thus, permissible variations are any allowable form of IT or
                 // IR, but if RI or R is used, R must equal N (RI and R forced
                 // to N).
-                cpu_p->TPR.CA = YiSafe2;
+                cpu_p->TPR.CA = Yi;
 
-                cpu_p->rTAG = idwtag;
+                sim_debug (DBG_ADDRMOD, & cpu_dev,
+                           "IT_MOD(IT_DIC): new CT_HOLD %02o new TAG %02o\n", 
+                           cpu_p->rTAG, idwtag);
+		cpu_p->cu.CT_HOLD = cpu_p->rTAG;
+		cpu_p->rTAG = idwtag;
+
                 Tm = GET_TM (cpu_p->rTAG);
                 if (Tm == TM_RI || Tm == TM_R)
                   {
@@ -1443,7 +1477,11 @@ startCA:;
 // Set the tally after the indirect word is processed; if it faults, the IR
 // should be unchanged. ISOLTS ps791 test-02g
                 SC_I_TALLY (cpu_p->AM_tally == 0);
+#ifdef ISOLTS
+		updateIWB (cpu_p, YiSafe2, cpu_p->rTAG);
+#else
                 updateIWB (cpu_p, cpu_p->TPR.CA, cpu_p->rTAG);
+#endif
                 goto startCA;
               } // IT_DIC
 
@@ -1487,6 +1525,8 @@ startCA:;
                 word18 saveCA = cpu_p->TPR.CA;
                 word36 indword;
                 Read (cpu_p, cpu_p->TPR.CA, & indword, APU_DATA_RMW);
+
+		cpu_p->cu.pot = 0;
 
                 Yi = GETHI (indword);
                 cpu_p->AM_tally = GET_TALLY (indword); // 12-bits
@@ -1542,7 +1582,12 @@ startCA:;
                 // to N).
                 cpu_p->TPR.CA = YiSafe;
 
+		sim_debug (DBG_ADDRMOD, & cpu_dev,
+                           "IT_MOD(IT_IDC): new CT_HOLD %02o new TAG %02o\n", 
+                           cpu_p->rTAG, idwtag);
+		cpu_p->cu.CT_HOLD = cpu_p->rTAG;
                 cpu_p->rTAG = idwtag;
+
                 Tm = GET_TM (cpu_p->rTAG);
                 if (Tm == TM_RI || Tm == TM_R)
                   {
@@ -1557,6 +1602,7 @@ startCA:;
 // should be unchanged. ISOLTS ps791 test-02f
                 SC_I_TALLY (cpu_p->AM_tally == 0);
                 updateIWB (cpu_p, cpu_p->TPR.CA, cpu_p->rTAG);
+
                 goto startCA;
               } // IT_IDC
           } // Td
