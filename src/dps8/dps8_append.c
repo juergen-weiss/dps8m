@@ -1307,12 +1307,6 @@ word24 do_append_cycle (cpu_state_t *cpu_p, processor_cycle_type thisCycle, word
 // START APPEND
     word3 n = 0; // PRn to be saved to TSN_PRNO
 
-    if (thisCycle == INSTRUCTION_FETCH)
-      {
-	cpu_p->TPR.TRR = cpu_p->PPR.PRR;
-	cpu_p->TPR.TSR = cpu_p->PPR.PSR;
-      }
-
     // If the rtcd instruction is executed with the processor in absolute
     // mode with bit 29 of the instruction word set OFF and without
     // indirection through an ITP or ITS pair, then:

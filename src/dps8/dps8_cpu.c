@@ -1840,7 +1840,7 @@ setCPU:;
                 cpu_p->TPR.TRR = 0;
 
 		sim_debug (DBG_INTR, & cpu_dev, "intr_pair_addr %u flag %d\n", 
-			   intr_pair_addr, cpu.interrupt_flag);
+			   intr_pair_addr, cpu_p->interrupt_flag);
 #ifndef SPEED
 		if_sim_debug (DBG_INTR, & cpu_dev) 
 		    traceInstruction (DBG_INTR);
@@ -2102,6 +2102,9 @@ setCPU:;
                     cpu_p->isExec = true;
                     cpu_p->isXED = true;
 		    cpu_p->apu.lastCycle = INSTRUCTION_FETCH;
+		    cpu_p->cu.XSF = 0;
+		    cpu_p->TPR.TSR = cpu_p->PPR.PSR;
+		    cpu_p->TPR.TRR = cpu_p->PPR.PRR;
                   }
                 // If we have done neither of the XED
                 else if (cpu_p->cu.xde == 1 && cpu_p->cu.xdo == 1)
@@ -2113,6 +2116,9 @@ setCPU:;
                     cpu_p->isExec = true;
                     cpu_p->isXED = true;
 		    cpu_p->apu.lastCycle = INSTRUCTION_FETCH;
+		    cpu_p->cu.XSF = 0;
+		    cpu_p->TPR.TSR = cpu_p->PPR.PSR;
+		    cpu_p->TPR.TRR = cpu_p->PPR.PRR;
                   }
                 // If we have not yet done the XEC
                 else if (cpu_p->cu.xde == 1)
@@ -2123,6 +2129,9 @@ setCPU:;
                     cpu_p->isExec = true;
                     cpu_p->isXED = false;
 		    cpu_p->apu.lastCycle = INSTRUCTION_FETCH;
+		    cpu_p->cu.XSF = 0;
+		    cpu_p->TPR.TSR = cpu_p->PPR.PSR;
+		    cpu_p->TPR.TRR = cpu_p->PPR.PRR;
                   }
                 else
                   {
@@ -2134,7 +2143,9 @@ setCPU:;
                                            //  place
                     cpu_p->cu.XSF = 0;
 sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
-                    cpu_p->cu.TSN_VALID [0] = 0;
+
+		    cpu_p->TPR.TSR = cpu_p->PPR.PSR;
+		    cpu_p->TPR.TRR = cpu_p->PPR.PRR;
                     PNL (cpu_p->prepare_state = ps_PIA);
                     PNL (L68_ (cpu_p->INS_FETCH = true;))
 		    fetchInstruction (cpu_p, cpu_p->PPR.IC);
