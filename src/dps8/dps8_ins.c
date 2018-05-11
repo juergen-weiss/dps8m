@@ -253,7 +253,7 @@ static void read_tra_op (cpu_state_t *cpu_p)
   {
     Read (cpu_p, cpu_p->TPR.CA, &cpu_p->CY, OPERAND_READ);
     if (! (get_addr_mode (cpu_p) == APPEND_mode || cpu_p->cu.TSN_VALID [0] ||
-           cpu_p->cu.XSF /*get_went_appending ()*/))
+           cpu_p->cu.XSF || cpu_p->currentInstruction.b29 /*get_went_appending ()*/))
       {
         if (cpu_p->currentInstruction.info->flags & TSPN_INS)
           {
@@ -474,11 +474,11 @@ static void scu2words (cpu_state_t *cpu_p, word36 *words)
 	      "pa885 test-05b xed inst",
 	    },
 	    { { 0000000451001, 0000000000041, 0000001000100, 0000000000000, 0000000200200, 0000004004000, 0200004235100, 0000005755000 },
-	      { 0000000651001, 0000000000041, 0000001000100, 0000000000000, 0000000200200, 0000004002000, 0200004235100, 0000005755000 },
+	      { 0000000451001, 0000000000041, 0000001000100, 0000000000000, 0000000200200, 0000004002000, 0200004235100, 0000005755000 },
 	      "pa885 test-05c xed inst", //                                                         xde/xdo
             },
             { { 0000000451001, 0000000000041, 0000001000100, 0000000000000, 0000001200200, 0000004006000, 0200004235100, 0000005755000 },
-              { 0000000651001, 0000000000041, 0000001000100, 0000000000000, 0000001200200, 0000004002000, 0200004235100, 0000005755000 },
+              { 0000000451001, 0000000000041, 0000001000100, 0000000000000, 0000001200200, 0000004002000, 0200004235100, 0000005755000 },
 	      "pa885 test-05d xed inst", //                                                         xde/xdo
             },
             { { 0000000454201, 0000000000041, 0000000000100, 0000000000000, 0001777200200, 0002000000500, 0005600560201, 0005600560201 },
@@ -1973,15 +1973,18 @@ sim_printf ("XXX this had b29 of 0; it may be necessary to clear TSN_VALID[0]\n"
                 cpu_p->TPR.TBR = GET_PR_BITNO (n);
 
                 cpu_p->TPR.TSR = cpu_p->PAR[n].SNR;
-                cpu_p->TPR.TRR = max3 (cpu_p->PAR[n].RNR, cpu_p->TPR.TRR, cpu_p->PPR.PRR);
+		if (ci->info->flags & TRANSFER_INS)
+		  cpu_p->TPR.TRR = max (cpu_p->PAR[n].RNR, cpu_p->PPR.PRR);
+		else
+		  cpu_p->TPR.TRR = max3 (cpu_p->PAR[n].RNR, cpu_p->TPR.TRR, cpu_p->PPR.PRR);
 
                 sim_debug (DBG_APPENDING, &cpu_dev,
                            "doPtrReg: n=%o offset=%05o TPR.CA=%06o "
                            "TPR.TBR=%o TPR.TSR=%05o TPR.TRR=%o\n",
                            n, offset, cpu_p->TPR.CA, cpu_p->TPR.TBR, 
                            cpu_p->TPR.TSR, cpu_p->TPR.TRR);
-                cpu_p->cu.XSF = 1;
-sim_debug (DBG_TRACEEXT, & cpu_dev, "executeInstruction !restart !EIS sets XSF to %o\n", cpu_p->cu.XSF);
+		//                cpu_p->cu.XSF = 1;
+		//sim_debug (DBG_TRACEEXT, & cpu_dev, "executeInstruction !restart !EIS sets XSF to %o\n", cpu_p->cu.XSF);
                 //set_went_appending ();
             }
 
@@ -9618,7 +9621,7 @@ static int doABSA (cpu_state_t *cpu_p, word36 * result)
 
     //if (get_addr_mode () == ABSOLUTE_mode && ! cpu_p->isb29)
     //if (get_addr_mode () == ABSOLUTE_mode && ! cpu_p->went_appending) // ISOLTS-860
-    if (get_addr_mode (cpu_p) == ABSOLUTE_mode && ! cpu_p->cu.XSF) // ISOLTS-860
+    if (get_addr_mode (cpu_p) == ABSOLUTE_mode && ! (cpu_p->cu.XSF || cpu_p->currentInstruction.b29)) // ISOLTS-860
       {
         * result = ((word36) (cpu_p->TPR.CA & MASK18)) << 12; // 24:12 format
         return SCPE_OK;
