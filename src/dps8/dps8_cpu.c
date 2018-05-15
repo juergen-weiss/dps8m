@@ -1565,7 +1565,7 @@ static void do_LUF_fault (cpu_state_t *cpu_p)
 //    / 0.0009765625
 //
 //  TR = 1024 << LUF
-    cpu_p->shadowTR = (word27) cpu_p->TR0 - (1024u << (is_priv_mode () ? 4 : cpu_p->CMR.luf));
+    cpu_p->shadowTR = (word27) cpu_p->TR0 - (1024u << (is_priv_mode (cpu_p) ? 4 : cpu_p->CMR.luf));
 
 
 // That logic fails for test 785. 
@@ -1942,11 +1942,20 @@ setCPU:;
                 // ISOLTS-776 04bcf, 785 02c
                 // (but do if in a DIS instruction with bit28 clear)
                 bool tmp_priv_mode = is_priv_mode (cpu_p);
+		bool is_dis = cpu_p->currentInstruction.opcode == 0616 &&
+                              cpu_p->currentInstruction.opcodeX == 0;
                 bool noCheckTR = tmp_priv_mode && 
-                                 ! (cpu_p->currentInstruction.opcode == 0616 &&
-                                 ! cpu_p->currentInstruction.opcodeX &&
-                                 ! GET_I (cpu_p->cu.IWB));
-                if (! (cpu_p->cu.xde | cpu_p->cu.xdo |
+                                 ! (is_dis && GET_I (cpu_p->cu.IWB) == 0);
+
+		if (is_dis)
+		  {
+		    // take interrupts and g7 faults as long as
+		    // last instruction is DIS (??)
+		    cpu_p->interrupt_flag = sample_interrupts (cpu_p);
+		    cpu_p->g7_flag =
+		              noCheckTR ? bG7PendingNoTRO (cpu_p) : bG7Pending (cpu_p);
+		  }
+                else if (! (cpu_p->cu.xde | cpu_p->cu.xdo |
                        cpu_p->cu.rpt | cpu_p->cu.rd | cpu_p->cu.rl))
                   {
                     if ((!cpu_p->wasInhibited) &&
@@ -2004,9 +2013,11 @@ setCPU:;
 // case it is being rechecked here. It is [locally] idempotent and light
 // weight, so this should be okay.
 
+// not necessary any more because of is_dis logic
+#if 0
                 if (cpu_p->interrupt_flag)
-                  cpu_p->g7_flag = noCheckTR ? bG7PendingNoTRO (cpu_p) : bG7Pending (cpu_p);
-
+                  cpu_p->g7_flag = noCheckTR ? bG7PendingNoTRO () : bG7Pending ();
+#endif
                 if (cpu_p->g7_flag)
                   {
                       cpu_p->g7_flag = false;
@@ -2086,7 +2097,7 @@ setCPU:;
 //    / 0.0009765625
 //
 //  TR = 1024 << LUF
-                   cpu_p->shadowTR = (word27) cpu_p->TR0 - (1024u << (is_priv_mode () ? 4 : cpu_p->CMR.luf));
+                   cpu_p->shadowTR = (word27) cpu_p->TR0 - (1024u << (is_priv_mode (cpu_p) ? 4 : cpu_p->CMR.luf));
 #endif
                     doFault (cpu_p, FAULT_LUF, fst_zero, "instruction cycle lockup");
                   }
