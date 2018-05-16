@@ -42,8 +42,7 @@ void Read (cpu_state_t *cpu_p, word18 address, word36 * result, processor_cycle_
     bool isBAR = get_bar_mode (cpu_p);
 
     //if (get_went_appending () ||
-    if (cpu_p->cu.XSF || (cyctyp != INSTRUCTION_FETCH && cpu_p->currentInstruction.b29) ||
-        ((cyctyp == APU_DATA_READ || cyctyp == APU_DATA_RMW) && cpu_p->cu.TSN_VALID [0]))
+    if (cpu_p->cu.XSF || (cyctyp != INSTRUCTION_FETCH && cpu_p->currentInstruction.b29))
       {
         goto B29;
       }
@@ -133,7 +132,6 @@ void Read2 (cpu_state_t *cpu_p, word18 address, word36 * result, processor_cycle
 
     //if (get_went_appending () ||
     if (cpu_p->cu.XSF || (cyctyp != INSTRUCTION_FETCH && cpu_p->currentInstruction.b29) ||
-        ((cyctyp == APU_DATA_READ || cyctyp == APU_DATA_RMW) && cpu_p->cu.TSN_VALID [0]) ||
         cyctyp == RTCD_OPERAND_FETCH) // ISOLTS-886 
            // Another option would be to set_went_appending in ReadRTCDOp
       {
@@ -228,7 +226,7 @@ void Read8 (cpu_state_t *cpu_p, word18 address, word36 * result, bool isAR)
 
     bool isBAR = get_bar_mode (cpu_p);
 
-    if (isAR || cpu_p->cu.TSN_VALID [0] || cpu_p->currentInstruction.b29 || cpu_p->cu.XSF /*get_went_appending ()*/)
+    if (isAR || cpu_p->cu.XSF /*get_went_appending ()*/)
       {
         goto B29;
       }
@@ -331,8 +329,8 @@ B29:;
 void Read16 (cpu_state_t *cpu_p, word18 address, word36 * result)
   {
     address &= paragraphMask; // Round to 8 word boundary
-    Read8 (cpu_p, address, result, false);
-    Read8 (cpu_p, address + 8, result + 8, false);
+    Read8 (cpu_p, address, result, cpu_p->currentInstruction.b29);
+    Read8 (cpu_p, address + 8, result + 8, cpu_p->currentInstruction.b29);
     return;
   }
 
@@ -347,7 +345,7 @@ void ReadPage (cpu_state_t *cpu_p, word18 address, word36 * result, bool isAR)
 
     bool isBAR = get_bar_mode (cpu_p);
 
-    if (isAR || cpu_p->cu.TSN_VALID [0] || cpu_p->currentInstruction.b29 || cpu_p->cu.XSF /*get_went_appending ()*/)
+    if (isAR || cpu_p->cu.XSF /*get_went_appending ()*/)
       {
         goto B29;
       }
@@ -454,8 +452,7 @@ void Write (cpu_state_t *cpu_p, word18 address, word36 data, processor_cycle_typ
 
     bool isBAR = get_bar_mode (cpu_p);
 
-    if (cpu_p->cu.XSF /*get_went_appending ()*/ || (cyctyp != INSTRUCTION_FETCH && cpu_p->currentInstruction.b29) ||
-        (cyctyp == APU_DATA_STORE && cpu_p->cu.TSN_VALID [0]))
+    if (cpu_p->cu.XSF /*get_went_appending ()*/ || (cyctyp != INSTRUCTION_FETCH && cpu_p->currentInstruction.b29))
         goto B29;
     
     
@@ -539,8 +536,7 @@ void Write2 (cpu_state_t *cpu_p, word18 address, word36 * data, processor_cycle_
     cpu_p->TPR.CA = cpu_p->iefpFinalAddress = address;
     bool isBAR = get_bar_mode (cpu_p);
 
-    if (cpu_p->cu.XSF /*get_went_appending ()*/ || (cyctyp != INSTRUCTION_FETCH && cpu_p->currentInstruction.b29) ||
-        (cyctyp == APU_DATA_STORE && cpu_p->cu.TSN_VALID [0]))
+    if (cpu_p->cu.XSF /*get_went_appending ()*/ || (cyctyp != INSTRUCTION_FETCH && cpu_p->currentInstruction.b29))
       goto B29;
     
     switch (get_addr_mode (cpu_p))
@@ -611,7 +607,7 @@ void Write1 (cpu_state_t *cpu_p, word18 address, word36 data, bool isAR)
   {
     cpu_p->TPR.CA = cpu_p->iefpFinalAddress = address;
     bool isBAR = get_bar_mode ();
-    if (isAR || cpu_p->cu.TSN_VALID [0] || cpu_p->currentInstruction.b29 || cpu_p->cu.XSF /*get_went_appending ()*/)
+    if (isAR || cpu_p->cu.XSF /*get_went_appending ()*/)
       goto B29;
     switch (get_addr_mode ())
       {
@@ -683,7 +679,7 @@ void Write8 (cpu_state_t *cpu_p, word18 address, word36 * data, bool isAR)
 
     bool isBAR = get_bar_mode (cpu_p);
 
-    if (isAR || cpu_p->cu.TSN_VALID [0] || cpu_p->currentInstruction.b29 || cpu_p->cu.XSF /*get_went_appending ()*/)
+    if (isAR || cpu_p->cu.XSF /*get_went_appending ()*/)
       goto B29;
     
     
@@ -782,8 +778,8 @@ B29:
 void Write16 (cpu_state_t *cpu_p, word18 address, word36 * data)
   {
     address &= paragraphMask; // Round to 8 word boundary
-    Write8 (cpu_p, address, data, false);
-    Write8 (cpu_p, address + 8, data + 8, false);
+    Write8 (cpu_p, address, data, cpu_p->currentInstruction.b29);
+    Write8 (cpu_p, address + 8, data + 8, cpu_p->currentInstruction.b29);
     return;
   }
 
@@ -792,10 +788,10 @@ void Write32 (cpu_state_t *cpu_p, word18 address, word36 * data)
 //#define paragraphMask 077777770
     //address &= paragraphMask; // Round to 8 word boundary
     address &= 077777740; // Round to 32 word boundary
-    Write8 (cpu_p, address, data, false);
-    Write8 (cpu_p, address + 8, data + 8, false);
-    Write8 (cpu_p, address + 16, data + 16, false);
-    Write8 (cpu_p, address + 24, data + 24, false);
+    Write8 (cpu_p, address, data, cpu_p->currentInstruction.b29);
+    Write8 (cpu_p, address + 8, data + 8, cpu_p->currentInstruction.b29);
+    Write8 (cpu_p, address + 16, data + 16, cpu_p->currentInstruction.b29);
+    Write8 (cpu_p, address + 24, data + 24, cpu_p->currentInstruction.b29);
     return;
   }
 
@@ -810,7 +806,7 @@ void WritePage (cpu_state_t *cpu_p, word18 address, word36 * data, bool isAR)
 
     bool isBAR = get_bar_mode (cpu_p);
 
-    if (isAR || cpu_p->cu.TSN_VALID [0] || cpu_p->currentInstruction.b29 || cpu_p->cu.XSF /*get_went_appending ()*/)
+    if (isAR || cpu_p->cu.XSF /*get_went_appending ()*/)
       goto B29;
     
     

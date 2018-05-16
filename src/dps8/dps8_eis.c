@@ -523,6 +523,7 @@ static void EISWriteCache (EISaddr * p)
           {
             cpu.TPR.TRR = p -> RNR;
             cpu.TPR.TSR = p -> SNR;
+	    cpu.cu.XSF = 0;
             if_sim_debug (DBG_TRACEEXT, & cpu_dev)
               {
                 for (uint i = 0; i < 8; i ++)
@@ -556,6 +557,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "EIS %ld Write8 TRR %o TSR %05o\n", eisaddr_
               //{
             cpu.TPR.TRR = cpu.PPR.PRR;
             cpu.TPR.TSR = cpu.PPR.PSR;
+	    cpu.cu.XSF = 0;
               //}
         
             if_sim_debug (DBG_TRACEEXT, & cpu_dev)
@@ -614,6 +616,7 @@ static void EISReadCache (EISaddr * p, word18 address)
       {
         cpu.TPR.TRR = p -> RNR;
         cpu.TPR.TSR = p -> SNR;
+	cpu.cu.XSF = 0;
 { long eisaddr_idx = EISADDR_IDX (p);
 sim_debug (DBG_TRACEEXT, & cpu_dev, "EIS %ld Read8 TRR %o TSR %05o\n", eisaddr_idx, cpu.TPR.TRR, cpu.TPR.TSR); }
         Read8 (cpup, paragraphAddress, p -> cachedParagraph, true);
@@ -632,6 +635,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "EIS %ld Read8 TRR %o TSR %05o\n", eisaddr_i
           //{
         cpu.TPR.TRR = cpu.PPR.PRR;
         cpu.TPR.TSR = cpu.PPR.PSR;
+	cpu.cu.XSF = 0;
           //}
         
 { long eisaddr_idx = EISADDR_IDX (p);
@@ -778,6 +782,7 @@ if (eisaddr_idx < 0 || eisaddr_idx > 2) { sim_warn ("IDX1"); return }
       {
         cpu.TPR.TRR = p -> RNR;
         cpu.TPR.TSR = p -> SNR;
+	cpu.cu.XSF = 0;
         ReadPage (cpup, addressN, data, true);
 
         if_sim_debug (DBG_TRACEEXT, & cpu_dev)
@@ -800,6 +805,7 @@ if (eisaddr_idx < 0 || eisaddr_idx > 2) { sim_warn ("IDX1"); return }
           //{
         cpu.TPR.TRR = cpu.PPR.PRR;
         cpu.TPR.TSR = cpu.PPR.PSR;
+	cpu.cu.XSF = 0;
           //}
         
         ReadPage (cpup, addressN, data, false);
@@ -838,6 +844,7 @@ if (eisaddr_idx < 0 || eisaddr_idx > 2) { sim_warn ("IDX1"); return }
       {
         cpu.TPR.TRR = p -> RNR;
         cpu.TPR.TSR = p -> SNR;
+	cpu.cu.XSF = 0;
         WritePage (cpup, addressN, data, true);
 
         if_sim_debug (DBG_TRACEEXT, & cpu_dev)
@@ -860,6 +867,7 @@ if (eisaddr_idx < 0 || eisaddr_idx > 2) { sim_warn ("IDX1"); return }
           //{
         cpu.TPR.TRR = cpu.PPR.PRR;
         cpu.TPR.TSR = cpu.PPR.PSR;
+	cpu.cu.XSF = 0;
           //}
         
         WritePage (cpup, addressN, data, false);

@@ -2709,7 +2709,7 @@ t_stat read_operand (cpu_state_t *cpu_p, word18 addr, processor_cycle_type cycty
         case 8:
             CPT (cpt1L, 9); // oct word
             addr &= 0777770;   // make on 8-word boundary
-            Read8 (cpu_p, addr, cpu_p->Yblock8, false);
+            Read8 (cpu_p, addr, cpu_p->Yblock8, cpu_p->currentInstruction.b29);
             break;
         case 16:
             CPT (cpt1L, 10); // 16 words
@@ -2748,7 +2748,7 @@ t_stat write_operand (cpu_state_t *cpu_p, word18 addr, UNUSED processor_cycle_ty
         case 8:
             CPT (cpt1L, 14); // 8 words
             addr &= 0777770;   // make on 8-word boundary
-            Write8 (cpu_p, addr, cpu_p->Yblock8, false);
+            Write8 (cpu_p, addr, cpu_p->Yblock8, cpu_p->currentInstruction.b29);
             break;
         case 16:
             CPT (cpt1L, 15); // 16 words
