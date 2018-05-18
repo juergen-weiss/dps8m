@@ -422,6 +422,8 @@ static char * cycle_str (cycles_e cycle)
           return "INTERRUPT_EXEC_cycle";
         case FETCH_cycle:
           return "FETCH_cycle";
+        case PSEUDO_FETCH_cycle:
+	  return "PSEUDO_FETCH_cycle";
         case SYNC_FAULT_RTN_cycle:
           return "SYNC_FAULT_RTN_cycle";
         default:
@@ -1316,7 +1318,7 @@ static void panel_process_event (void)
           {
             cpu_reset_unit_idx (ASSUME0, false);
             cpu_p->cu.IWB = cpu_p->switches.data_switches;
-            set_cpu_cycle (EXEC_cycle);
+            set_cpu_cycle (cpu_p, EXEC_cycle);
           }
          else // EXECUTE FAULT
           {
@@ -1891,7 +1893,7 @@ setCPU:;
               break;
 
             case FETCH_cycle:
-              {
+              //{
 #ifdef PANEL
                 memset (cpu_p->cpt, 0, sizeof (cpu_p->cpt));
 #endif
@@ -2043,7 +2045,11 @@ setCPU:;
 // limit, the fault is recognized before any instruction in the new mode is
 // executed."
 
-                cpu_p->lufCounter ++;
+                // fall through
+	  case PSEUDO_FETCH_cycle:
+
+	    cpu_p->lufCounter ++;
+	    tmp_priv_mode = is_priv_mode (cpu_p);
 #if 1
                 if (cpu_p->lufCounter > luf_limits[cpu_p->CMR.luf])
                   {
@@ -2144,7 +2150,14 @@ setCPU:;
 		    cpu_p->TPR.TSR = cpu_p->PPR.PSR;
 		    cpu_p->TPR.TRR = cpu_p->PPR.PRR;
                   }
-                else
+		else if (cpu_p->cycle == PSEUDO_FETCH_cycle)
+		  {
+		    cpu_p->apu.lastCycle = INSTRUCTION_FETCH;
+		    cpu_p->cu.XSF = 0;
+		    cpu_p->TPR.TSR = cpu_p->PPR.PSR;
+		    cpu_p->TPR.TRR = cpu_p->PPR.PRR;
+		  }
+		else
                   {
                     CPT (cpt1U, 20); // not XEC or RPx
                     cpu_p->isExec = false;
@@ -2165,7 +2178,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                 CPT (cpt1U, 21); // go to exec cycle
                 advanceG7Faults (cpu_p);
                 set_cpu_cycle (cpu_p, EXEC_cycle);
-              }
+		//}
               break;
 
             case EXEC_cycle:
@@ -2252,7 +2265,14 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                         set_addr_mode (cpu_p, APPEND_mode);
                       }
 
-                    set_cpu_cycle (cpu_p, FETCH_cycle);
+		    if (ret == CONT_TRA)
+		      {
+			// PSEUDO_FETCH_cycle does not check interrupts/g7faults
+			cpu_p->wasXfer = false;
+			set_cpu_cycle (cpu_p, PSEUDO_FETCH_cycle);
+		      }
+		    else
+		      set_cpu_cycle (cpu_p, FETCH_cycle);
                     break;   // don't bump PPR.IC, instruction already did it
                   }
 

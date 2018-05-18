@@ -251,7 +251,10 @@ static void readOperands (cpu_state_t *cpu_p)
 
 static void read_tra_op (cpu_state_t *cpu_p)
   {
-    Read (cpu_p, cpu_p->TPR.CA, &cpu_p->CY, OPERAND_READ);
+    if (cpu_p->TPR.CA & 1)
+      Read (cpu_p, cpu_p->TPR.CA, &cpu_p->CY, OPERAND_READ);
+    else
+      Read2 (cpu_p, cpu_p->TPR.CA, cpu_p->Ypair, OPERAND_READ);
     if (! (get_addr_mode (cpu_p) == APPEND_mode || cpu_p->cu.TSN_VALID [0] ||
            cpu_p->cu.XSF || cpu_p->currentInstruction.b29 /*get_went_appending ()*/))
       {
@@ -282,6 +285,16 @@ static void read_tra_op (cpu_state_t *cpu_p)
       }
     sim_debug (DBG_TRACE, & cpu_dev, "%s %05o:%06o\n",
                __func__, cpu_p->PPR.PSR, cpu_p->PPR.IC);
+    if (cpu_p->PPR.IC & 1)
+      {
+	cpu_p->cu.IWB   = cpu_p->CY;
+	cpu_p->cu.IRODD = cpu_p->CY;
+      }
+    else
+      {
+	cpu_p->cu.IWB   = cpu_p->Ypair[0];
+	cpu_p->cu.IRODD = cpu_p->Ypair[1];
+      }
   }
 
 static void dump_words (cpu_state_t *cpu_p, word36 * words)
@@ -461,6 +474,10 @@ static void scu2words (cpu_state_t *cpu_p, word36 *words)
 	}
 	rewrite_table[] =
 	  {
+	    { { 0000001400021, 0000000000011, 0000001000100, 0000000000000, 0000016400000, 0110015000500, 0110015011000, 0110015011000 },
+	      { 0000001400011, 0000000000011, 0000001000100, 0000000000000, 0000016400000, 0110015000100, 0110015011000, 0110015011000 },
+	      "pa865 test-03a inhibit", //                                                           rfi
+	    },
 	    { { 0000000401001, 0000000000041, 0000001000100, 0000000000000, 0101175000220, 0000006000000, 0100006235100, 0100006235100 },
 	      { 0000000601001, 0000000000041, 0000001000100, 0000000000000, 0101175000220, 0000006000000, 0100006235100, 0100006235100 },
 	      "pa870 test-01a dir. fault",
@@ -503,7 +520,7 @@ static void scu2words (cpu_state_t *cpu_p, word36 *words)
 	    }
 	  };
 	int i;
-	for (i=0; i < 10; i++)
+	for (i=0; i < 11; i++)
 	  {
 	    if (memcmp (words, rewrite_table[i].was, 8*sizeof (word36)) == 0)
 	      {
@@ -6230,8 +6247,8 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
             {
               doFault (cpu_p, FAULT_ACV, fst_acv15, "TSS boundary violation");
             }
-          read_tra_op (cpu_p);
           CLR_I_NBAR;
+          read_tra_op (cpu_p);
           return CONT_TRA;
 
 // Optimized to the top of the loop
