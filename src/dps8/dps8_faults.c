@@ -513,8 +513,12 @@ else if (faultNumber == FAULT_ACV)
 // only time an EIS instruction could be executing is during EXEC_cycle.
 // I am also assuming that only multi-word EIS instructions are of interest.
 // Testing faultNumber fixes ISOLTS 890-04a
+    // fixes 890-04a and 791 / 792
     SC_I_MIF (cpu_p->cycle == EXEC_cycle &&
-        cpu_p->currentInstruction.info->ndes > 0);
+	      (cpu_p->currentInstruction.info->ndes > 0 ||
+	       (faultNumber == FAULT_IPR && (subFault.fault_ipr_subtype & FR_ILL_OP) &&
+		cpu_p->currentInstruction.opcodeX &&
+		(cpu_p->currentInstruction.opcode & 0410) == 0)));
     sim_debug (DBG_TRACEEXT, & cpu_dev, "MIF %o\n", TST_I_MIF);
 #if 0
 sim_debug (DBG_FAULT, & cpu_dev, "cycle %u ndes %u fn %u v %u\n", cpu_p->cycle, cpu_p->currentInstruction.info->ndes, faultNumber, (cpu_p->cycle == EXEC_cycle && cpu_p->currentInstruction . info -> ndes > 0) || faultNumber == FAULT_IPR);
