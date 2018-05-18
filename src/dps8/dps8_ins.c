@@ -3276,7 +3276,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
           // RTCD always ends up in append mode.
           set_addr_mode (cpu_p, APPEND_mode);
             
-          return CONT_TRA;
+          return CONT_RET;
 
         case x0 (0604):  // tmi
           // If negative indicator ON then
@@ -6043,7 +6043,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
             // C(Y)0,17 -> C(PPR.IC)
             // C(Y)18,31 -> C(IR)
             do_caf (cpu_p);
-            read_tra_op (cpu_p);
+            Read (cpu_p, cpu_p->TPR.CA, &cpu_p->CY, OPERAND_READ);
 
             cpu_p->PPR.IC = GETHI (cpu_p->CY);
             word18 tempIR = GETLO (cpu_p->CY) & 0777770;
@@ -6088,7 +6088,7 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
             //           TSTF (tempIR, I_ABS) ? 1 : 0);
             CPTUR (cptUseIR);
             cpu_p->cu.IR = tempIR;
-            return CONT_TRA;
+            return CONT_RET;
           }
 
 // Optimized to the top of the loop
