@@ -1103,7 +1103,7 @@ void fetchInstruction (cpu_state_t *cpu_p, word18 addr)
         if (cpu_p->cu.repeat_first)
           {
             CPT (cpt2U, 10); // fetch rpt odd
-            Read (cpu_p, addr, & cpu_p->cu.IRODD, INSTRUCTION_FETCH);
+            //Read (addr, & cpu_p->cu.IRODD, INSTRUCTION_FETCH);
           }
       }
     else if (cpu_p->cu.rpt || cpu_p->cu.rd || cpu_p->cu.rl)
@@ -1111,13 +1111,15 @@ void fetchInstruction (cpu_state_t *cpu_p, word18 addr)
         if (cpu_p->cu.repeat_first)
           {
             CPT (cpt2U, 11); // fetch rpt even
-            Read (cpu_p, addr, & cpu_p->cu.IWB, INSTRUCTION_FETCH);
-#if 0
-            word36 tmp[2];
-            Read2 (cpu_p, addr, tmp, INSTRUCTION_FETCH);
-            cpu_p->cu.IWB = tmp[0];
-            cpu_p->cu.IRODD = tmp[1];
-#endif
+	    if (addr & 1)
+	      Read (cpu_p, addr, & cpu_p->cu.IWB, INSTRUCTION_FETCH);
+	    else
+	      {
+		word36 tmp[2];
+		Read2 (cpu_p, addr, tmp, INSTRUCTION_FETCH);
+		cpu_p->cu.IWB = tmp[0];
+		cpu_p->cu.IRODD = tmp[1];
+	      }
           }
       }
     else
@@ -1462,30 +1464,30 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "%s sets XSF to %o\n", __func__, cpu_p->cu.X
                      "Instruction not allowed in XEC/XED");
         // The even instruction from C(Y-pair) must not alter
         // C(Y-pair)36,71, and must not be another xed instruction.
-        if (opcode == 0717 && !opcodeX && cpu_p->cu.xdo /* even instruction being executed */)
-            doFault (cpu_p, FAULT_IPR,
+        if (opcode == 0717 && !opcodeX && cpu_p->cu.xde && cpu_p->cu.xdo /* even instruction being executed */)
+	    doFault (cpu_p, FAULT_IPR,
                      fst_ill_proc,
                      "XED of XED on even word");
         // ISOLTS 791 03k, 792 03k
         if (opcode == 0560 && !opcodeX) {
             // To Execute Double (XED) the RPD instruction, the RPD must be the second
             // instruction at an odd-numbered address.
-            if (cpu_p->cu.xdo /* even instr being executed */)
-                doFault (cpu_p, FAULT_IPR,
+            if (cpu_p->cu.xde && cpu_p->cu.xdo /* even instr being executed */)
+  	        doFault (cpu_p, FAULT_IPR,
                      (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC},
                      "XED of RPD on even word");
             // To execute an instruction pair having an rpd instruction as the odd
             // instruction, the xed instruction must be located at an odd address.
-            if (!cpu_p->cu.xdo /* odd instr being executed */ && !(cpu_p->PPR.IC & 1))
-                doFault (cpu_p, FAULT_IPR,
+            if (!cpu_p->cu.xde && cpu_p->cu.xdo /* odd instr being executed */ && !(cpu_p->PPR.IC & 1))
+	        doFault (cpu_p, FAULT_IPR,
                      (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC},
                      "XED of RPD on odd word, even IC");
         }
     } else if (unlikely (cpu_p->isExec)) {
         // To execute a rpd instruction, the xec instruction must be in an odd location.
         // ISOLTS 768 01w
-        if (opcode == 0560 && !opcodeX && !cpu_p->cu.xde && !(cpu_p->PPR.IC & 1)) 
-            doFault (cpu_p, FAULT_IPR,
+        if (opcode == 0560 && !opcodeX && cpu_p->cu.xde && !(cpu_p->PPR.IC & 1))
+	    doFault (cpu_p, FAULT_IPR,
                  (_fault_subtype) {.fault_ipr_subtype=FR_ILL_PROC},
                  "XEC of RPx on even word");
     }
@@ -1938,7 +1940,7 @@ first = false;
 sim_printf ("XXX this had b29 of 0; it may be necessary to clear TSN_VALID[0]\n");
 }}
 #else
-	    // append cycles updates cpu.PPR.IC to TPR.CA
+	    // append cycles updates cpu_p->PPR.IC to TPR.CA
 	    word18 saveIC = cpu_p->PPR.IC;
             Read (cpu_p, cpu_p->PPR.IC + 1 + n, & cpu_p->currentEISinstruction.op[n],
                   INSTRUCTION_FETCH);
@@ -2137,9 +2139,11 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "executeInstruction not EIS sets XSF to %o\n
 /// executeInstruction: Write operand
 ///
 
+    cpu_p->last_write = 0;
     if (WRITEOP (ci))
       {
         CPT (cpt2L, 3); // Write operands
+	cpu_p->last_write = cpu_p->TPR.CA;
 #ifndef REORDER
         if (! READOP (ci))
           {
