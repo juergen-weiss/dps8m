@@ -1016,7 +1016,7 @@ startCA:;
 #ifdef LOCKLESS
 		    core_write_unlock(cpu_p, phys_address, indword, __func__);
 #else
-                    Write (indaddr, indword, APU_DATA_STORE);
+                    Write (cpu_p, indaddr, indword, APU_DATA_STORE);
 #endif
 
                     SC_I_TALLY (tally == 0);

@@ -913,12 +913,16 @@ void doG7Fault (cpu_state_t *cpu_p, bool allowTR)
       // }
     // According AL39,  Table 7-1. List of Faults, priority of connect is 25
     // and priority of Timer runout is 26, lower number means higher priority
+#if defined(THREADZ) || defined(LOCKLESS)
     lock_scu ();
+#endif
      if (cpu_p->g7Faults & (1u << FAULT_CON))
        {
          cpu_p->g7Faults &= ~(1u << FAULT_CON);
 
+#if defined(THREADZ) || defined(LOCKLESS)
 	 unlock_scu ();
+#endif
          doFault (cpu_p, FAULT_CON, cpu_p->g7SubFaults [FAULT_CON], "Connect"); 
        }
      if (allowTR && cpu_p->g7Faults & (1u << FAULT_TRO))
@@ -926,7 +930,9 @@ void doG7Fault (cpu_state_t *cpu_p, bool allowTR)
          cpu_p->g7Faults &= ~(1u << FAULT_TRO);
 
          //sim_printf("timer runout %12o\n",cpu_p->PPR.IC);
+#if defined(THREADZ) || defined(LOCKLESS)
          unlock_scu ();
+#endif
 	 doFault (cpu_p, FAULT_TRO, fst_zero, "Timer runout"); 
        }
 
@@ -937,7 +943,9 @@ void doG7Fault (cpu_state_t *cpu_p, bool allowTR)
        {
          cpu_p->g7Faults &= ~(1u << FAULT_EXF);
 
+#if defined(THREADZ) || defined(LOCKLESS)
 	 unlock_scu ();
+#endif
 	 doFault (cpu_p, FAULT_EXF, fst_zero, "Execute fault");
        }
 
@@ -945,23 +953,31 @@ void doG7Fault (cpu_state_t *cpu_p, bool allowTR)
      if (cpu_p->FFV_faults & 1u)  // FFV + 2 OC TRAP
        {
          cpu_p->FFV_faults &= ~1u;
+#if defined(THREADZ) || defined(LOCKLESS)
 	 unlock_scu ();
+#endif
          do_FFV_fault (1, "OC TRAP");
        }
      if (cpu_p->FFV_faults & 2u)  // FFV + 4 CU HISTORY OVERFLOW TRAP
        {
          cpu_p->FFV_faults &= ~2u;
+#if defined(THREADZ) || defined(LOCKLESS)
 	 unlock_scu ();
+#endif
          do_FFV_fault (2, "CU HIST OVF TRAP");
        }
      if (cpu_p->FFV_faults & 4u)  // FFV + 6 ADR TRAP
        {
          cpu_p->FFV_faults &= ~4u;
+#if defined(THREADZ) || defined(LOCKLESS)
 	 unlock_scu ();
+#endif
          do_FFV_fault (3, "ADR TRAP");
        }
 #endif
+#if defined(THREADZ) || defined(LOCKLESS)
      unlock_scu ();
+#endif
      doFault (cpu_p, FAULT_TRB, (_fault_subtype) {.bits=cpu_p->g7Faults}, "Dazed and confused in doG7Fault");
   }
 

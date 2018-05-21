@@ -2083,7 +2083,9 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "executeInstruction not EIS sets XSF to %o\n
           {
             CPT (cpt2L, 2); // Read operands
             readOperands (cpu_p);
+#ifdef LOCKLESS
 	    cpu_p->rmw_address = cpu_p->iefpFinalAddress;
+#endif
             if (cpu_p->cu.rl)
               {
                 switch (operand_size (cpu_p))
@@ -2110,15 +2112,15 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "executeInstruction not EIS sets XSF to %o\n
 #else
         if (flags & PREPARE_CA)
           {
-            do_caf ();
+            do_caf (cpu_p);
             L68_ (cpu_p->AR_F_E = true;)
             cpu_p->iefpFinalAddress = cpu_p->TPR.CA;
           }
         else if (READOP (ci))
           {
-            do_caf ();
+            do_caf (cpu_p);
             cpu_p->iefpFinalAddress = cpu_p->TPR.CA;
-            readOperands ();
+            readOperands (cpu_p);
           }
 #endif
         PNL (cpu_p->IWRAddr = 0);
@@ -2147,7 +2149,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "executeInstruction not EIS sets XSF to %o\n
 #ifndef REORDER
         if (! READOP (ci))
           {
-            do_caf ();
+            do_caf (cpu_p);
             cpu_p->iefpFinalAddress = cpu_p->TPR.CA;
           }
 #endif
