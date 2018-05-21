@@ -36,7 +36,7 @@
 #include "threadz.h"
 #endif
 
-#define DBG_CTR cpu_p->cycleCnt
+#define DBG_CTR cpu.cycleCnt
 
 /*
  FAULT RECOGNITION
@@ -871,10 +871,18 @@ bool bG7PendingNoTRO (cpu_state_t *cpu_p)
 
 void setG7fault (uint cpuNo, _fault faultNo, _fault_subtype subFault)
   {
-    //sim_debug (DBG_FAULT, & cpu_dev, "setG7fault CPU %d fault %d (%o) sub %"PRId64" %"PRIo64"\n", 
-    //           cpuNo, faultNo, faultNo, subFault.bits, subFault.bits);
+    sim_debug (DBG_FAULT, & cpu_dev, "setG7fault CPU %d fault %d (%o) sub %"PRId64" %"PRIo64"\n", 
+               cpuNo, faultNo, faultNo, subFault.bits, subFault.bits);
+#ifdef LOCKLESS
+#if defined(__FreeBSD__) && !defined(USE_COMPILER_ATOMICS)
+    atomic_set_32 (&cpus[cpuNo].g7FaultsPreset, (1u << faultNo));
+#else
+    __sync_or_and_fetch (&cpus[cpuNo].g7FaultsPreset, (1u << faultNo));
+#endif
+#else // ! LOCKLESS
     cpus[cpuNo].g7FaultsPreset |= (1u << faultNo);
-    //cpu_p->g7SubFaultsPreset [faultNo] = subFault;
+#endif
+    //cpu.g7SubFaultsPreset [faultNo] = subFault;
     cpus[cpuNo].g7SubFaults [faultNo] = subFault;
 #if defined(THREADZ) || defined(LOCKLESS)
     wakeCPU(cpuNo);
@@ -959,14 +967,19 @@ void doG7Fault (cpu_state_t *cpu_p, bool allowTR)
 
 void advanceG7Faults (cpu_state_t *cpu_p)
   {
-    lock_scu ();
+#ifdef LOCKLESS
+#if defined(__FreeBSD__) && !defined(USE_COMPILER_ATOMICS)
+    uint tmp = atomic_readandclear_32 (&cpu_p->g7FaultsPreset);
+#else
+    uint tmp = __sync_fetch_and_and (&cpu_p->g7FaultsPreset, 0);
+#endif
+    cpu_p->g7Faults |= tmp;
+#else  // !LOCKLESS
     cpu_p->g7Faults |= cpu_p->g7FaultsPreset;
     cpu_p->g7FaultsPreset = 0;
-    //memcpy (cpu_p->g7SubFaults, cpu_p->g7SubFaultsPreset, sizeof (cpu_p->g7SubFaults));
+#endif
 #ifdef L68
     cpu_p->FFV_faults |= cpu_p->FFV_faults_preset;
     cpu_p->FFV_faults_preset = 0;
 #endif
-    unlock_scu ();
   }
-
