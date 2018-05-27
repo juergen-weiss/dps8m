@@ -6249,12 +6249,14 @@ static t_stat doInstruction (cpu_state_t *cpu_p)
         case x0 (0715):  // tss
           CPTUR (cptUseBAR);
           do_caf (cpu_p);
-          if (cpu_p->TPR.CA >= ((word18) cpu_p->BAR.BOUND) << 9)
-            {
-              doFault (cpu_p, FAULT_ACV, fst_acv15, "TSS boundary violation");
-            }
-          CLR_I_NBAR;
-          read_tra_op (cpu_p);
+	  if (get_bar_mode (cpu_p))
+	    read_tra_op (cpu_p);
+	  else
+	    {
+	      cpu_p->TPR.CA = get_BAR_address (cpu_p, cpu_p->TPR.CA);
+	      read_tra_op (cpu_p);
+	      CLR_I_NBAR;
+	    }
           return CONT_TRA;
 
 // Optimized to the top of the loop
