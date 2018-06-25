@@ -1300,7 +1300,7 @@ bool tstOVFfault (cpu_state_t *cpu_p)
     return true;
   }
 
-t_stat executeInstruction (cpu_state_t *cpu_p)
+t_stat executeInstruction (cpu_state_t *cpu_p, bool restart)
   {
     CPT (cpt2U, 13); // execute instruction 
 
@@ -1367,8 +1367,6 @@ t_stat executeInstruction (cpu_state_t *cpu_p)
 // Local caches of frequently accessed data
 
     const uint ndes = info->ndes;
-    const bool restart = cpu_p->cu.rfi;         // instruction is to be restarted
-    cpu_p->cu.rfi = 0;
     const opc_flag flags = info->flags;
     const opc_mod mods = info->mods;
     const uint32 opcode = ci->opcode;   // opcode
@@ -9767,8 +9765,6 @@ elapsedtime ();
 
 // Reworking logic
 
-#define rework
-#ifdef rework
     if (cpu_p->cu.FIF) // fault occured during instruction fetch
       {
 //if (cpu_p->cu.rfi) sim_printf ( "RCU FIF refetch return caught rfi\n");
@@ -9807,94 +9803,21 @@ elapsedtime ();
       {
 //sim_printf ("MME2 restart\n");
         sim_debug (DBG_FAULT, & cpu_dev, "RCU MME2 restart return\n");
-        cpu_p->cu.rfi = 0;
         longjmp (cpu_p->jmpMain, JMP_RESTART);
       }
-#else
-    if (cpu_p->cu.rfi || // S/W asked for the instruction to be started
-        cpu_p->cu.FIF) // fault occured during instruction fetch
-      {
-
-        // I am misusing this bit; on restart I want a way to tell the
-        // CPU state machine to restart the instruction, which is not
-        // how Multics uses it. I need to pick a different way to
-        // communicate; for now, turn it off on refetch so the state
-        // machine doesn't become confused.
-
-        cpu_p->cu.rfi = 0;
-        sim_debug (DBG_FAULT, & cpu_dev, "RCU rfi/FIF REFETCH return\n");
-        longjmp (cpu_p->jmpMain, JMP_REFETCH);
-      }
-
-// It seems obvious that MMEx should do a JMP_SYNC_FAULT_RETURN, but doing
-// a JMP_RESTART makes 'debug' work. (The same change to DRL does not make
-// 'gtss' work, tho.
-
-    if (fi_addr == FAULT_MME2)
-      {
-//sim_printf ("MME2 restart\n");
-        sim_debug (DBG_FAULT, & cpu_dev, "RCU MME2 restart return\n");
-        cpu_p->cu.rfi = 1;
-        longjmp (cpu_p->jmpMain, JMP_RESTART);
-      }
-#endif
-
-#if 0
-// I beleive this logic is correct (cf. ISOLTS pa870 test-02d TRA PR1|6 not
-// switching to append mode do to page fault clearing went_appending), but the
-// emulator's refetching of operand descriptors after page fault of EIS
-// instruction in absolute mode is breaking the logic.
-    // If restarting after a page fault, set went_appending...
-    if (fi_addr == FAULT_DF0 ||
-        fi_addr == FAULT_DF1 ||
-        fi_addr == FAULT_DF2 ||
-        fi_addr == FAULT_DF3 ||
-        fi_addr == FAULT_ACV ||
-        fi_addr == FAULT_F1 ||
-        fi_addr == FAULT_F2 ||
-        fi_addr == FAULT_F3)
-      {
-        set_went_appending ();
-      }
-#endif
     // MME faults resume with the next instruction
 
-
-
-#ifdef rework
     if (fi_addr == FAULT_DIV ||
         fi_addr == FAULT_OFL ||
         fi_addr == FAULT_IPR)
       {
         sim_debug (DBG_FAULT, & cpu_dev, "RCU sync fault return\n");
-        cpu_p->cu.rfi = 0;
         longjmp (cpu_p->jmpMain, JMP_SYNC_FAULT_RETURN);
       }
-#else
-    if (fi_addr == FAULT_MME ||
-        /* fi_addr == FAULT_MME2 || */
-        fi_addr == FAULT_MME3 ||
-        fi_addr == FAULT_MME4 ||
-        fi_addr == FAULT_DRL ||
-        fi_addr == FAULT_DIV ||
-        fi_addr == FAULT_OFL ||
-        fi_addr == FAULT_IPR)
-      {
-        sim_debug (DBG_FAULT, & cpu_dev, "RCU MMEx sync fault return\n");
-        cpu_p->cu.rfi = 0;
-        longjmp (cpu_p->jmpMain, JMP_SYNC_FAULT_RETURN);
-      }
-#endif
-
-
-
-
-
 
     // LUF can happen during fetch or CAF. If fetch, handled above
     if (fi_addr == FAULT_LUF)
       {
-        cpu_p->cu.rfi = 1;
         sim_debug (DBG_FAULT, & cpu_dev, "RCU LUF RESTART return\n");
         longjmp (cpu_p->jmpMain, JMP_RESTART);
       }
@@ -9911,7 +9834,6 @@ elapsedtime ();
         fi_addr == FAULT_EXF)
       {
         // If the fault occurred during fetch, handled above.
-        cpu_p->cu.rfi = 1;
         sim_debug (DBG_FAULT, & cpu_dev, "RCU ACV RESTART return\n");
         longjmp (cpu_p->jmpMain, JMP_RESTART);
       }

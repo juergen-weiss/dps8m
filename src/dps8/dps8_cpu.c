@@ -1617,6 +1617,7 @@ t_stat threadz_sim_instr (cpu_state_t *cpu_p)
 //cpu_p->have_tst_lock = false;
 
     t_stat reason = 0;
+    bool restart_instr = false;
       
 #if !defined(THREADZ) && !defined(LOCKLESS)
     set_cpu_idx (0);
@@ -1654,6 +1655,8 @@ setCPU:;
     // This allows long jumping to the top of the state machine
     int val = setjmp (cpu_p->jmpMain);
 
+    restart_instr = false;
+
     switch (val)
       {
         case JMP_ENTRY:
@@ -1680,6 +1683,7 @@ setCPU:;
             break;
         case JMP_RESTART:
 	    set_cpu_cycle (cpu_p, EXEC_cycle);
+	    restart_instr = true;
             break;
         default:
           sim_warn ("longjmp value of %d unhandled\n", val);
@@ -2154,7 +2158,8 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "fetchCycle bit 29 sets XSF to 0\n");
                 if (GET_I (cpu_p->cu.IWB))
                   cpu_p->wasInhibited = true;
 
-                t_stat ret = executeInstruction (cpu_p);
+                t_stat ret = executeInstruction (cpu_p, restart_instr);
+		restart_instr = false;
 #ifdef TR_WORK_EXEC
                cpu_p->rTRticks ++;
 #endif

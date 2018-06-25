@@ -21,7 +21,7 @@ t_stat display_the_matrix (int32 arg, const char * buf);
 t_stat prepareComputedAddress (void);   // new
 void cu_safe_restore(cpu_state_t *cpu_p);
 void fetchInstruction(cpu_state_t *cpu_p, word18 addr);
-t_stat executeInstruction (cpu_state_t *cpu_p);
+t_stat executeInstruction (cpu_state_t *cpu_p, bool restart);
 void doRCU (cpu_state_t *cpu_p) NO_RETURN;
 void traceInstruction (cpu_state_t *cpu_p, uint flag);
 bool tstOVFfault (cpu_state_t *cpu_p);
