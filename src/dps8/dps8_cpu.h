@@ -2191,13 +2191,13 @@ int core_unlock_all(cpu_state_t *cpu_p);
 	}								\
       if (i == 0)							\
 	{								\
-	  sim_warn ("%s: locked %x addr %x deadlock\n", __FUNCTION__, cpu.locked_addr, addr); \
+	  sim_warn ("%s: locked %x addr %x deadlock\n", __FUNCTION__, cpu_p->locked_addr, addr); \
 	}								\
-      cpu.lockCnt++;							\
+      cpu_p->lockCnt++;							\
       if (i == DEADLOCK_DETECT)						\
-	cpu.lockImmediate++;						\
-      cpu.lockWait += (DEADLOCK_DETECT-i);				\
-      cpu.lockWaitMax = ((DEADLOCK_DETECT-i) > cpu.lockWaitMax) ? (DEADLOCK_DETECT-i) : cpu.lockWaitMax; \
+	cpu_p->lockImmediate++;						\
+      cpu_p->lockWait += (DEADLOCK_DETECT-i);				\
+      cpu_p->lockWaitMax = ((DEADLOCK_DETECT-i) > cpu_p->lockWaitMax) ? (DEADLOCK_DETECT-i) : cpu_p->lockWaitMax; \
     }									\
   while (0)
 
@@ -2234,7 +2234,7 @@ int core_unlock_all(cpu_state_t *cpu_p);
 	    }								\
 	 if (i == 0)							\
 	   {								\
-	    sim_warn ("%s: locked %x addr %x deadlock\n", __FUNCTION__, cpu.locked_addr, addr); \
+	    sim_warn ("%s: locked %x addr %x deadlock\n", __FUNCTION__, cpu_p->locked_addr, addr); \
 	    }								\
 	 }								\
      while (0)

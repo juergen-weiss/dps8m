@@ -533,6 +533,7 @@ void iom_core_write (UNUSED uint iom_unit_idx, word24 addr, word36 data, UNUSED 
 #endif
 #endif
 #ifdef LOCKLESS
+    cpu_state_t *cpu_p = &cpus[current_running_cpu_idx];
     LOCK_CORE_WORD(addr);
     STORE_REL_CORE_WORD(addr, data);
 #else
@@ -553,6 +554,7 @@ void iom_core_write2 (UNUSED uint iom_unit_idx, word24 addr, word36 even, word36
 #endif
 #endif
 #ifdef LOCKLESS
+    cpu_state_t *cpu_p = &cpus[current_running_cpu_idx];
     LOCK_CORE_WORD(addr);
     STORE_REL_CORE_WORD(addr, even);
     addr++;
@@ -574,6 +576,7 @@ void iom_core_write2 (UNUSED uint iom_unit_idx, word24 addr, word36 even, word36
 void iom_core_read_lock (UNUSED uint iom_unit_idx, word24 addr, word36 *data, UNUSED const char * ctx)
   {
 #ifdef LOCKLESS
+    cpu_state_t *cpu_p = &cpus[current_running_cpu_idx];
     LOCK_CORE_WORD(addr);
     word36 v;
     LOAD_ACQ_CORE_WORD(v, addr);
