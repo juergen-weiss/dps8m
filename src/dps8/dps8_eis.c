@@ -544,7 +544,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "EIS %ld Write8 TRR %o TSR %05o\n", eisaddr_
             for (uint i = 0; i < 8; i ++)
               if (p->wordDirty[i])
                 {
-                  Write1 (p->cachedAddr+i, p -> cachedParagraph[i], true);
+                  Write1 (cpup, p->cachedAddr+i, p -> cachedParagraph[i], true);
                   p->wordDirty[i] = false;
                 }
 #else
@@ -580,7 +580,7 @@ sim_debug (DBG_TRACEEXT, & cpu_dev, "EIS %ld Write8 NO PR TRR %o TSR %05o\n", ei
             for (uint i = 0; i < 8; i ++)
               if (p->wordDirty[i])
                 {
-                  Write1 (p->cachedAddr+i, p -> cachedParagraph[i], false);
+                  Write1 (cpup, p->cachedAddr+i, p -> cachedParagraph[i], false);
                   p->wordDirty[i] = false;
                 }
 #else

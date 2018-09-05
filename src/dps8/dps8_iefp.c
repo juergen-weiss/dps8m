@@ -618,19 +618,19 @@ B29:
 void Write1 (cpu_state_t *cpu_p, word18 address, word36 data, bool isAR)
   {
     cpu_p->TPR.CA = cpu_p->iefpFinalAddress = address;
-    bool isBAR = get_bar_mode ();
+    bool isBAR = get_bar_mode (cpu_p);
     if (isAR || cpu_p->cu.XSF /*get_went_appending ()*/)
       goto B29;
-    switch (get_addr_mode ())
+    switch (get_addr_mode (cpu_p))
       {
         case ABSOLUTE_mode:
           {
             if (isBAR)
              {
-                cpu_p->iefpFinalAddress = get_BAR_address (address);
-                set_apu_status (apuStatus_FABS); // XXX maybe...
-                fauxDoAppendCycle (APU_DATA_STORE);
-                core_write (cpu_p->iefpFinalAddress, data, __func__);
+	       cpu_p->iefpFinalAddress = get_BAR_address (cpu_p, address);
+	       set_apu_status (cpu_p, apuStatus_FABS); // XXX maybe...
+	       fauxDoAppendCycle (cpu_p, APU_DATA_STORE);
+                core_write (cpu_p, cpu_p->iefpFinalAddress, data, __func__);
                 sim_debug (DBG_FINAL, & cpu_dev,
                            "Write1(Actual) Write:      bar address=%08o "
                            "writeData=%012"PRIo64"\n", 
@@ -640,9 +640,9 @@ void Write1 (cpu_state_t *cpu_p, word18 address, word36 data, bool isAR)
               }
             else
               {
-                set_apu_status (apuStatus_FABS);
-                fauxDoAppendCycle (APU_DATA_STORE);
-                core_write (address, data, __func__);
+                set_apu_status (cpu_p, apuStatus_FABS);
+                fauxDoAppendCycle (cpu_p, APU_DATA_STORE);
+                core_write (cpu_p, address, data, __func__);
                 sim_debug (DBG_FINAL, & cpu_dev,
                            "Write1(Actual) Write:      abs address=%08o "
                            "writeData=%012"PRIo64"\n",
@@ -657,10 +657,10 @@ void Write1 (cpu_state_t *cpu_p, word18 address, word36 data, bool isAR)
 B29:
             if (isBAR)
               {
-                cpu_p->TPR.CA = get_BAR_address (address);
+                cpu_p->TPR.CA = get_BAR_address (cpu_p, address);
 		cpu_p->TPR.TSR = cpu_p->PPR.PSR;
 		cpu_p->TPR.TRR = cpu_p->PPR.PRR;
-                cpu_p->iefpFinalAddress = do_append_cycle (APU_DATA_STORE, & data,
+                cpu_p->iefpFinalAddress = do_append_cycle (cpu_p, APU_DATA_STORE, & data,
                                                         1);
                 sim_debug (DBG_APPENDING | DBG_FINAL, & cpu_dev,
                            "Write8(Actual) Write: bar iefpFinalAddress="
@@ -671,7 +671,7 @@ B29:
               }
             else
               {
-                cpu_p->iefpFinalAddress = do_append_cycle (APU_DATA_STORE, & data, 
+                cpu_p->iefpFinalAddress = do_append_cycle (cpu_p, APU_DATA_STORE, & data, 
                                                        1);
                 sim_debug (DBG_APPENDING | DBG_FINAL, & cpu_dev,
                            "Write(Actual) Write: iefpFinalAddress=%08o "
